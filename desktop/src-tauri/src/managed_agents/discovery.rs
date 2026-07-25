@@ -18,6 +18,7 @@ const CLAUDE_CODE_AVATAR_URL: &str = "https://anthropic.gallerycdn.vsassets.io/e
 const CODEX_AVATAR_URL: &str = "https://openai.gallerycdn.vsassets.io/extensions/openai/chatgpt/26.5313.41514/1773706730621/Microsoft.VisualStudio.Services.Icons.Default";
 const BUZZ_AGENT_AVATAR_URL: &str =
     "https://raw.githubusercontent.com/block/buzz/refs/heads/main/crates/buzz-agent/buzz-agent.png";
+const SPACE_AVATAR_URL: &str = "https://space.symmitri.ai/icon.png";
 
 fn common_binary_paths() -> &'static [PathBuf] {
     static PATHS: OnceLock<Vec<PathBuf>> = OnceLock::new();
@@ -188,6 +189,43 @@ const KNOWN_ACP_RUNTIMES: &[KnownAcpRuntime] = &[
         login_hint: None,
         auth_probe_args: None,
     },
+    KnownAcpRuntime {
+        id: "space",
+        label: "Space",
+        commands: &["space"],
+        aliases: &[],
+        avatar_url: SPACE_AVATAR_URL,
+        // Space brings its own skills and workspace tools, but relies on buzz-dev-mcp for
+        // shell, file editing, and for `buzz messages send` when replying in a channel.
+        mcp_command: Some("buzz-dev-mcp"),
+        mcp_hooks: false,
+        underlying_cli: Some("space"),
+        cli_install_commands: &[],
+        cli_install_commands_windows: &[],
+        adapter_install_commands: &[],
+        install_instructions_url: "https://github.com/symmitri/space",
+        cli_install_hint: "Install Space and link its `bin/space` onto PATH as `space`.",
+        adapter_install_hint: "",
+        // Space resolves skills from the agent's own workspace, not from a nest-relative
+        // directory, so there is nothing for Buzz to symlink.
+        skill_dir: None,
+        supports_acp_model_switching: false,
+        model_env_var: Some("SPACE_LLM_MODEL"),
+        // Space selects its provider from the configured base URL rather than a separate
+        // provider setting, so there is no provider env var to normalize.
+        provider_env_var: None,
+        provider_locked: false,
+        default_env: &[],
+        config_file_path: None,
+        config_file_format: None,
+        supports_acp_native_config: false,
+        thinking_env_var: None,
+        max_tokens_env_var: None,
+        context_limit_env_var: None,
+        required_normalized_fields: &["model"],
+        login_hint: None,
+        auth_probe_args: None,
+    },
 ];
 
 /// Skill discovery directories declared by known runtimes.
@@ -342,7 +380,7 @@ pub use overrides::{apply_agent_command_update, create_time_agent_command_overri
 
 fn default_agent_args(command: &str) -> Option<Vec<String>> {
     match normalize_command_identity(command).as_str() {
-        "goose" => Some(vec!["acp".to_string()]),
+        "goose" | "space" => Some(vec!["acp".to_string()]),
         "codex" | "codex-acp" | "claude-agent-acp" | "claude-code-acp" | "claude-code"
         | "claudecode" | "buzz-agent" => Some(Vec::new()),
         _ => None,
