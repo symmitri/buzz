@@ -1142,6 +1142,80 @@ fn test_cli_install_commands_for_os_selects_powershell_on_windows() {
     );
 }
 
+// ── Space runtime ───────────────────────────────────────────────────────────
+
+/// Space is registered and resolvable by the command Buzz spawns.
+#[test]
+fn test_space_runtime_is_in_the_catalog() {
+    let space = super::known_acp_runtime_exact("space").expect("space must be a known runtime");
+
+    assert_eq!(space.label, "Space");
+    assert_eq!(space.commands, &["space"]);
+    // Discovery matches on the spawn command, and Buzz spawns the bare binary name.
+    assert_eq!(
+        super::known_acp_runtime("space").map(|r| r.id),
+        Some("space")
+    );
+    // A user who points the agent at a checkout still resolves to the same runtime.
+    assert_eq!(
+        super::known_acp_runtime("/Users/me/code/space/bin/space").map(|r| r.id),
+        Some("space")
+    );
+}
+
+/// Space replies in channels by shelling out to `buzz messages send`, which only exists
+/// when Buzz wires up its MCP server. Losing this makes the agent silent, not broken.
+#[test]
+fn test_space_runtime_gets_buzz_dev_mcp() {
+    let space = super::known_acp_runtime_exact("space").unwrap();
+    assert_eq!(space.mcp_command, Some("buzz-dev-mcp"));
+}
+
+/// The model picker writes SPACE_LLM_MODEL, which the `space acp` CLI reads.
+#[test]
+fn test_space_runtime_model_env_var_matches_the_cli() {
+    let space = super::known_acp_runtime_exact("space").unwrap();
+    assert_eq!(space.model_env_var, Some("SPACE_LLM_MODEL"));
+    assert_eq!(
+        space.provider_env_var, None,
+        "Space derives its provider from the base URL; a provider var would be dead config"
+    );
+}
+
+/// The Space binary is a multi-command CLI: without the `acp` subcommand it prints usage
+/// and exits, and the agent never comes up.
+#[test]
+fn test_space_is_spawned_with_the_acp_subcommand() {
+    assert_eq!(super::normalize_agent_args("space", vec![]), vec!["acp"]);
+    assert_eq!(
+        super::normalize_agent_args("/Users/me/code/space/bin/space", vec![]),
+        vec!["acp"],
+        "a checkout path must get the subcommand too"
+    );
+    // An explicit override still wins, so an operator can pass extra flags.
+    assert_eq!(
+        super::normalize_agent_args("space", vec!["acp".into(), "--verbose".into()]),
+        vec!["acp", "--verbose"]
+    );
+}
+
+/// Space installs from a checkout, so Buzz must not offer to install it.
+#[test]
+fn test_space_runtime_has_no_install_commands() {
+    let space = super::known_acp_runtime_exact("space").unwrap();
+    assert!(space.cli_install_commands.is_empty());
+    assert!(space.adapter_install_commands.is_empty());
+    assert_eq!(
+        space.cli_install_commands_for_os(),
+        space.cli_install_commands,
+        "space must behave the same on every platform"
+    );
+    assert!(
+        !space.cli_install_hint.is_empty(),
+        "the UI needs a manual hint instead"
+    );
+}
+
 // ── Phase C: login_shell_candidates ─────────────────────────────────────────
 
 /// On Unix, login_shell_candidates returns at least one candidate.
