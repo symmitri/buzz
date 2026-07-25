@@ -38,6 +38,7 @@ export default defineConfig(async () => ({
     port: parseInt(process.env.VITE_PORT || "1420", 10),
     strictPort: true,
     host: host || false,
+    allowedHosts: process.env.VITE_ALLOWED_HOSTS?.split(",").filter(Boolean),
     hmr: host
       ? {
           protocol: "ws",
