@@ -42,6 +42,7 @@ mod relay_admission;
 mod reset;
 mod secret_store;
 mod shutdown;
+mod spaces_auth;
 mod team_catalog;
 mod templates;
 mod terminal_runtime;
@@ -228,6 +229,11 @@ pub fn run() {
         .manage(PendingEntityDeepLinks::default())
         .manage(BuilderlabSession::default())
         .manage(BuilderlabLogin::default())
+        .manage(spaces_auth::SpacesAuth::default())
+        .manage(spaces_auth::SpacesUpdates::default())
+        .manage(spaces_auth::SpacesCommunity::default())
+        .manage(spaces_auth::SpacesConnections::default())
+        .manage(spaces_auth::connections::github::SpacesGitHubRequests::default())
         .manage(commands::pairing::PairingHandle::new())
         .manage(terminal_runtime::TerminalSessions::default())
         .manage(archive::sync::ArchiveSyncState::default())
@@ -430,9 +436,13 @@ pub fn run() {
 
             try_regenerate_nest(&app_handle);
 
-            if let Some(mgr) = huddle::models::global_model_manager() {
-                mgr.start_stt_download(state.http_client.clone());
-                mgr.start_tts_download(state.http_client.clone());
+            // Symmitri modification: Alpha loads optional voice models when
+            // voice is used. Existing voice commands already start these downloads.
+            if crate::build_identity::demo_slug() != Some("spaces-alpha") {
+                if let Some(mgr) = huddle::models::global_model_manager() {
+                    mgr.start_stt_download(state.http_client.clone());
+                    mgr.start_tts_download(state.http_client.clone());
+                }
             }
 
             // Handle deep link URLs received while the app is running (macOS)
@@ -537,6 +547,24 @@ pub fn run() {
             clear_pending_navigation_deep_links,
             take_pending_entity_deep_link,
             acknowledge_pending_entity_deep_link,
+            spaces_auth::updates::spaces_prepare_update,
+            spaces_auth::updates::spaces_install_update,
+            spaces_auth::spaces_start_google_login,
+            spaces_auth::spaces_get_google_account,
+            spaces_auth::spaces_list_agents,
+            spaces_auth::spaces_cancel_google_login,
+            spaces_auth::spaces_forget_google_account,
+            spaces_auth::community_session::spaces_connect_community,
+            spaces_auth::connections::spaces_read_connections,
+            spaces_auth::connections::spaces_cancel_connections,
+            spaces_auth::connections::spaces_set_connection_enabled,
+            spaces_auth::connections::spaces_request_connection_access,
+            spaces_auth::connections::spaces_connect_connection_key,
+            spaces_auth::connections::spaces_start_connection_oauth,
+            spaces_auth::connections::spaces_disconnect_connection_account,
+            spaces_auth::connections::github::spaces_read_github_connection,
+            spaces_auth::connections::github::spaces_change_github_connection,
+            spaces_auth::connections::github::spaces_cancel_github_connection,
             start_builderlab_login,
             cancel_builderlab_login,
             get_builderlab_auth,

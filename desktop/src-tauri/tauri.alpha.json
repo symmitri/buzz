@@ -1,0 +1,32 @@
+{
+  "productName": "Spaces Alpha",
+  "version": "0.1.7",
+  "identifier": "ai.symmitri.spaces.alpha",
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://spaces-alpha-updates-334562777753.europe-west1.run.app/alpha.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEFDM0JFNzRENzUyM0ZGNzEKUldSeC95TjFUZWM3cklKaC9TQjUvVzE3WjVua1d1V3Y2R1pMOXA1L3BUaHRNRW9Yd3ErT1Jqcm0K"
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": [
+          "buzz-demo-spaces-alpha"
+        ]
+      }
+    }
+  },
+  "bundle": {
+    "targets": [
+      "app"
+    ],
+    "createUpdaterArtifacts": true,
+    "resources": {
+      "../../LICENSE": "licenses/Buzz-LICENSE.txt"
+    },
+    "macOS": {
+      "infoPlist": "SpacesAlpha.plist"
+    }
+  }
+}

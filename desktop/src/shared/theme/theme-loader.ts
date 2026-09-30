@@ -1,3 +1,4 @@
+// Symmitri modification: opt-in branded themes through the existing appearance contract.
 /**
  * Theme Loader
  *
@@ -6,6 +7,7 @@
  */
 
 import type { ThemeRegistrationRaw } from "shiki";
+import { getSymmitriPalette } from "./symmitri-themes";
 import {
   type TerminalPalette,
   extractTerminalPalette,
@@ -53,6 +55,8 @@ export const BUZZ_DARK_BASE_THEME: SyntaxThemeName = "github-dark";
  * back to unhighlighted plain text.
  */
 export function resolveShikiThemeName(name: string): SyntaxThemeName {
+  const palette = getSymmitriPalette(name);
+  if (palette) return palette.baseTheme;
   if (name === BUZZ_THEME_NAME) return BUZZ_BASE_THEME;
   if (name === BUZZ_DARK_THEME_NAME) return BUZZ_DARK_BASE_THEME;
   return name as SyntaxThemeName;
@@ -64,6 +68,10 @@ export function resolveShikiThemeName(name: string): SyntaxThemeName {
 export const SYNTAX_THEMES = [
   "buzz",
   "buzz-dark",
+  "symmitri",
+  "symmitri-dark",
+  "symmitri-classic",
+  "symmitri-classic-dark",
   "andromeeda",
   "aurora-x",
   "ayu-dark",
@@ -132,6 +140,8 @@ export type SyntaxThemeName = (typeof SYNTAX_THEMES)[number];
 // for themes that haven't been loaded yet.
 export const LIGHT_THEMES: ReadonlySet<SyntaxThemeName> = new Set([
   "buzz",
+  "symmitri",
+  "symmitri-classic",
   "catppuccin-latte",
   "everforest-light",
   "github-light",
@@ -161,6 +171,10 @@ const themeImports: Record<
   buzz: () => import("shiki/themes/github-light.mjs"),
   // Buzz Dark reuses the github-dark palette; dark gradient applied separately.
   "buzz-dark": () => import("shiki/themes/github-dark.mjs"),
+  symmitri: () => import("shiki/themes/github-light-default.mjs"),
+  "symmitri-dark": () => import("shiki/themes/github-dark.mjs"),
+  "symmitri-classic": () => import("shiki/themes/github-light-default.mjs"),
+  "symmitri-classic-dark": () => import("shiki/themes/github-dark.mjs"),
   andromeeda: () => import("shiki/themes/andromeeda.mjs"),
   "aurora-x": () => import("shiki/themes/aurora-x.mjs"),
   "ayu-dark": () => import("shiki/themes/ayu-dark.mjs"),
@@ -241,6 +255,8 @@ export const THEME_PAIRS: ReadonlyMap<SyntaxThemeName, SyntaxThemeName> =
     // Light → Dark
     // Buzz is the first-party pair; keep it first so it leads every category.
     ["buzz", "buzz-dark"],
+    ["symmitri", "symmitri-dark"],
+    ["symmitri-classic", "symmitri-classic-dark"],
     ["catppuccin-latte", "catppuccin-mocha"],
     ["everforest-light", "everforest-dark"],
     ["github-light", "github-dark"],
@@ -260,6 +276,8 @@ export const THEME_PAIRS: ReadonlyMap<SyntaxThemeName, SyntaxThemeName> =
     ["vitesse-light", "vitesse-dark"],
     // Dark → Light (reverse mappings)
     ["buzz-dark", "buzz"],
+    ["symmitri-dark", "symmitri"],
+    ["symmitri-classic-dark", "symmitri-classic"],
     ["catppuccin-mocha", "catppuccin-latte"],
     ["everforest-dark", "everforest-light"],
     ["github-dark", "github-light"],
@@ -391,10 +409,13 @@ export function extractThemeInfo(
   themeName: string,
   theme: ThemeRegistrationRaw,
 ): ThemeInfo {
+  const palette = getSymmitriPalette(themeName);
   const bg =
-    (theme.colors?.["editor.background"] as string | undefined) || "#1e1e1e";
+    palette?.background ??
+    ((theme.colors?.["editor.background"] as string | undefined) || "#1e1e1e");
   const fg =
-    (theme.colors?.["editor.foreground"] as string | undefined) || "#d4d4d4";
+    palette?.foreground ??
+    ((theme.colors?.["editor.foreground"] as string | undefined) || "#d4d4d4");
   const gitColors = extractGitColors(
     theme.colors as Record<string, string> | undefined,
   );
@@ -402,12 +423,24 @@ export function extractThemeInfo(
     name: themeName,
     bg,
     fg,
-    comment: extractCommentColor(
-      theme.settings as ReadonlyArray<ThemeSetting> | undefined,
-      fg,
-    ),
-    ...gitColors,
-    terminalPalette: extractTerminalPalette(theme),
+    comment:
+      palette?.muted ??
+      extractCommentColor(
+        theme.settings as ReadonlyArray<ThemeSetting> | undefined,
+        fg,
+      ),
+    added: palette?.added ?? gitColors.added,
+    deleted: palette?.deleted ?? gitColors.deleted,
+    modified: palette?.modified ?? gitColors.modified,
+    terminalPalette: palette
+      ? {
+          ...extractTerminalPalette(theme),
+          background: bg,
+          foreground: fg,
+          cursor: fg,
+          cursorText: bg,
+        }
+      : extractTerminalPalette(theme),
   };
 }
 

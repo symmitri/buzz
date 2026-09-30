@@ -1,8 +1,9 @@
 import * as React from "react";
 
 import { useEphemeralChannelDisplay } from "@/features/channels/useEphemeralChannelDisplay";
+import { isSelfDirectMessage } from "@/features/channels/lib/dmParticipantDisplay";
 import { usePresenceQuery } from "@/features/presence/hooks";
-import { useUsersBatchQuery } from "@/features/profile/hooks";
+import { useProfileQuery, useUsersBatchQuery } from "@/features/profile/hooks";
 import { resolveUserLabel } from "@/features/profile/lib/identity";
 import { resolveChannelDisplayLabel } from "@/features/sidebar/lib/channelLabels";
 import type { Channel, PresenceStatus } from "@/shared/api/types";
@@ -19,6 +20,7 @@ export function useActiveChannelHeader(
   activeChannel: Channel | null,
   currentPubkey?: string,
 ) {
+  const activeDmIsSelf = isSelfDirectMessage(activeChannel, currentPubkey);
   const activeDmParticipants = React.useMemo(() => {
     if (activeChannel?.channelType !== "dm") {
       return [];
@@ -48,6 +50,7 @@ export function useActiveChannelHeader(
   const activeDmProfilesQuery = useUsersBatchQuery(activeDmParticipantPubkeys, {
     enabled: activeDmParticipantPubkeys.length > 0,
   });
+  const selfProfileQuery = useProfileQuery(activeDmIsSelf);
   const activeChannelEphemeralDisplay =
     useEphemeralChannelDisplay(activeChannel);
   const activeDmPresenceStatus: PresenceStatus | null =
@@ -56,8 +59,9 @@ export function useActiveChannelHeader(
           activeDmParticipantPubkeys[0]?.toLowerCase()
         ] ?? null)
       : null;
-  const activeDmAvatarUrl =
-    activeDmParticipantPubkeys.length > 0
+  const activeDmAvatarUrl = activeDmIsSelf
+    ? (selfProfileQuery.data?.avatarUrl ?? null)
+    : activeDmParticipantPubkeys.length > 0
       ? (activeDmProfilesQuery.data?.profiles?.[
           normalizePubkey(activeDmParticipantPubkeys[0] ?? "")
         ]?.avatarUrl ?? null)
@@ -95,6 +99,7 @@ export function useActiveChannelHeader(
       : "Channels",
     activeDmAvatarUrl,
     activeDmHeaderParticipants,
+    activeDmIsSelf,
     activeDmPresenceStatus,
     activeChannelEphemeralDisplay,
   };
