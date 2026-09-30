@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { AlertTriangle, Eye, EyeOff, RefreshCw } from "lucide-react";
 import * as React from "react";
 
@@ -277,8 +279,8 @@ export function EncryptedBackupCreator({
         <DialogHeader className="pr-8">
           <DialogTitle>Create a key backup</DialogTitle>
           <DialogDescription>
-            You can close this window while Buzz finishes the backup in the
-            background.
+            You can close this window while {PRODUCT_NAME} finishes the backup
+            in the background.
           </DialogDescription>
         </DialogHeader>
         <div
@@ -331,9 +333,9 @@ export function EncryptedBackupCreator({
 
           {!state.downloadPending && !state.savedPassword ? (
             <p className="text-xs leading-5 text-muted-foreground">
-              Keep the file private and save its password somewhere safe — Buzz
-              cannot reset it. Once ready, the backup remains available to
-              download for 5 minutes.
+              Keep the file private and save its password somewhere safe —{" "}
+              {PRODUCT_NAME} cannot reset it. Once ready, the backup remains
+              available to download for 5 minutes.
             </p>
           ) : null}
 

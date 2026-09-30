@@ -654,6 +654,13 @@ export function AppShell() {
     },
     [goSettings],
   );
+  const handleOpenProfileSettings = React.useCallback(() => {
+    if (settingsOpen) {
+      handleSettingsSectionChange("profile");
+    } else {
+      handleOpenSettings("profile");
+    }
+  }, [handleOpenSettings, handleSettingsSectionChange, settingsOpen]);
 
   const handleOpenSearchResult = React.useCallback(
     (hit: SearchHit, query: string) => {
@@ -687,6 +694,7 @@ export function AppShell() {
   });
   useSettingsShortcuts({
     onClose: handleCloseSettings,
+    onOpenProfile: handleOpenProfileSettings,
     onOpenSettings: handleOpenSettings,
     open: isHuddleRoom ? undefined : settingsOpen,
   });

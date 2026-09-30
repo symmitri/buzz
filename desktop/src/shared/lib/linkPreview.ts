@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import {
   buildIssueLink,
   buildProjectLink,
@@ -319,7 +321,7 @@ function parseBuzzEntityPreview(href: string): SupportedLinkPreview | null {
     return {
       kind: "buzz-pull-request",
       href: buildPullRequestLink(link),
-      provider: "Buzz",
+      provider: `${PRODUCT_NAME}`,
       title,
       typeLabel: "Review",
     };
@@ -328,7 +330,7 @@ function parseBuzzEntityPreview(href: string): SupportedLinkPreview | null {
     return {
       kind: "buzz-issue",
       href: buildIssueLink(link),
-      provider: "Buzz",
+      provider: `${PRODUCT_NAME}`,
       title,
       typeLabel: "Task",
     };
@@ -337,7 +339,7 @@ function parseBuzzEntityPreview(href: string): SupportedLinkPreview | null {
     return {
       kind: "buzz-project",
       href: buildProjectLink(link),
-      provider: "Buzz",
+      provider: `${PRODUCT_NAME}`,
       title,
       typeLabel: "project",
     };
@@ -345,7 +347,7 @@ function parseBuzzEntityPreview(href: string): SupportedLinkPreview | null {
   return {
     kind: "buzz-repository",
     href: buildRepoLink(link),
-    provider: "Buzz",
+    provider: `${PRODUCT_NAME}`,
     title,
     typeLabel: "repo",
   };
@@ -387,7 +389,7 @@ function parseBuzzGitLink(
   return {
     kind: "buzz-repository",
     href: buildRepoLink({ owner, dtag: repo }),
-    provider: "Buzz",
+    provider: `${PRODUCT_NAME}`,
     title: repo,
     typeLabel: "repo",
   };

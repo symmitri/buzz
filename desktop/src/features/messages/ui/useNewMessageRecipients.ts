@@ -14,6 +14,7 @@ import { useIsArchivedPredicate } from "@/features/identity-archive/hooks";
 import {
   useFlattenedUserSearchResults,
   useInfiniteUserSearchQuery,
+  useProfileQuery,
   useUserSearchFetchMoreOnScroll,
   useUsersBatchQuery,
 } from "@/features/profile/hooks";
@@ -21,6 +22,8 @@ import { rankUserCandidatesBySearch } from "@/features/profile/lib/userCandidate
 import { useIdentityQuery } from "@/shared/api/hooks";
 import type { ManagedAgent, UserSearchResult } from "@/shared/api/types";
 import { normalizePubkey, truncateNpub } from "@/shared/lib/pubkey";
+
+import { currentHumanDmRecipient, isSelfDmRecipient } from "./selfDm";
 
 /** Maximum recipients (excluding the current user) a DM can address. */
 export const NEW_MESSAGE_RECIPIENT_LIMIT = 8;
@@ -33,12 +36,15 @@ export type NewMessageRecipientCandidate = UserSearchResult & {
   personaId?: string | null;
 };
 
-export function formatRecipientName(user: UserSearchResult) {
-  return (
+export function formatRecipientName(
+  user: UserSearchResult,
+  currentPubkey?: string,
+) {
+  const name =
     user.displayName?.trim() ||
     user.nip05Handle?.trim() ||
-    truncateNpub(user.pubkey)
-  );
+    truncateNpub(user.pubkey);
+  return isSelfDmRecipient(user.pubkey, currentPubkey) ? `${name} (you)` : name;
 }
 
 function candidateWithAgentMetadata(
@@ -86,6 +92,7 @@ export function useNewMessageRecipients({
   );
 
   const identityQuery = useIdentityQuery();
+  const profileQuery = useProfileQuery(active);
   const managedAgentsQuery = useManagedAgentsQuery({ enabled: active });
   const relayAgentsQuery = useRelayAgentsQuery({ enabled: active });
   const channelsQuery = useChannelsQuery({ enabled: active });
@@ -119,14 +126,21 @@ export function useNewMessageRecipients({
       sharedChannelIds: getSharedChannelIds(channelsQuery.data),
     });
 
+    if (
+      currentPubkeyNormalized &&
+      selectedPubkeys.has(currentPubkeyNormalized)
+    ) {
+      return [];
+    }
+
     const addCandidate = (
       candidate: NewMessageRecipientCandidate,
-      options: { includeSelected?: boolean } = {},
+      options: { includeSelected?: boolean; includeSelf?: boolean } = {},
     ) => {
       const pubkey = normalizePubkey(candidate.pubkey);
 
       if (
-        pubkey === currentPubkeyNormalized ||
+        (pubkey === currentPubkeyNormalized && !options.includeSelf) ||
         (!options.includeSelected && selectedPubkeys.has(pubkey)) ||
         isArchivedDiscovery(pubkey) ||
         (candidate.isAgent && !eligibleAgentPubkeys.has(pubkey))
@@ -160,6 +174,17 @@ export function useNewMessageRecipients({
         personaId: current.personaId ?? candidate.personaId,
       });
     };
+
+    if (selectedPubkeys.size === 0) {
+      const currentHuman = currentHumanDmRecipient(
+        identityQuery.data,
+        currentPubkey,
+        profileQuery.data,
+      );
+      if (currentHuman) {
+        addCandidate(currentHuman, { includeSelf: true });
+      }
+    }
 
     for (const user of userSearchResults) {
       addCandidate(candidateWithAgentMetadata(user, managedAgentsByPubkey), {
@@ -205,14 +230,14 @@ export function useNewMessageRecipients({
       [...candidatesByPubkey.values()],
       {
         currentPubkey,
-        getLabel: formatRecipientName,
+        getLabel: (user) => formatRecipientName(user, currentPubkey),
       },
     );
 
     return rankUserCandidatesBySearch({
       allowEmptyQuery: true,
       candidates: coalescedCandidates,
-      getLabel: formatRecipientName,
+      getLabel: (user) => formatRecipientName(user, currentPubkey),
       limit: Math.max(DIRECTORY_PAGE_SIZE, coalescedCandidates.length),
       query: deferredSearchQuery,
     });
@@ -220,8 +245,10 @@ export function useNewMessageRecipients({
     channelsQuery.data,
     currentPubkey,
     deferredSearchQuery,
+    identityQuery.data,
     isArchivedDiscovery,
     managedAgentsQuery.data,
+    profileQuery.data,
     relayAgentsQuery.data,
     selectedPubkeys,
     userSearchResults,
@@ -283,6 +310,17 @@ export function useNewMessageRecipients({
 
       setSelectedUsers((current) => {
         const pubkey = normalizePubkey(user.pubkey);
+        const self = isSelfDmRecipient(pubkey, currentPubkey);
+        if (self) {
+          return current.length === 0 ? [user] : current;
+        }
+        if (
+          current.some((candidate) =>
+            isSelfDmRecipient(candidate.pubkey, currentPubkey),
+          )
+        ) {
+          return current;
+        }
         if (
           current.some(
             (candidate) => normalizePubkey(candidate.pubkey) === pubkey,
@@ -295,7 +333,7 @@ export function useNewMessageRecipients({
       });
       setSearchQuery("");
     },
-    [selectedUsers.length],
+    [currentPubkey, selectedUsers.length],
   );
 
   const removeUser = React.useCallback((pubkey: string) => {

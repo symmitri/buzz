@@ -1,3 +1,4 @@
+// Symmitri modification: opt-in branded themes through the existing appearance contract.
 /**
  * Adaptive Theme Engine
  *
@@ -11,6 +12,8 @@
 // =============================================================================
 // Color Utilities
 // =============================================================================
+
+import { getSymmitriPalette } from "./symmitri-themes";
 
 interface RGB {
   r: number;
@@ -193,6 +196,7 @@ export function createThemeVars(
   syntaxFg: string,
   syntaxComment: string,
   gitColors?: ThemeGitColors,
+  themeName?: string,
 ): ThemeResult {
   const isDark = luminance(syntaxBg) < 0.5;
 
@@ -231,7 +235,7 @@ export function createThemeVars(
   const textFg = hexToHsl(syntaxFg);
   const huddleControlFg = isDark ? textFg : "0 0% 98%";
 
-  return {
+  const result: ThemeResult = {
     isDark,
     vars: {
       // Backgrounds
@@ -287,4 +291,33 @@ export function createThemeVars(
       "--ui-warning-bg": overlay(accentOrange, isDark ? 0.1 : 0.08),
     },
   };
+  const palette = getSymmitriPalette(themeName);
+  if (palette) {
+    // One palette feeds both the installed theme and Appearance's previews.
+    const overrides = {
+      "--background": palette.background,
+      "--card": palette.background,
+      "--popover": palette.background,
+      "--muted": palette.surface,
+      "--accent": palette.surface,
+      "--secondary": palette.surface,
+      "--sidebar-background": palette.sidebar,
+      "--sidebar-accent": palette.surface,
+      "--border": palette.border,
+      "--sidebar-border": palette.border,
+      "--input": palette.input,
+      "--ring": palette.accent,
+      "--sidebar-ring": palette.accent,
+    };
+    for (const [key, value] of Object.entries(overrides)) {
+      result.vars[key] = hexToHsl(value);
+    }
+    result.vars["--status-modified"] = palette.modified;
+    result.vars["--ui-warning"] = palette.modified;
+    result.vars["--ui-warning-bg"] = overlay(
+      palette.modified,
+      isDark ? 0.1 : 0.08,
+    );
+  }
+  return result;
 }

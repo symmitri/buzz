@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 /**
  * Quota-aware localStorage writes with pure-cache eviction recovery.
  *
@@ -132,8 +134,7 @@ function notifyStorageFull(): void {
   import("sonner")
     .then(({ toast }) => {
       toast.error("Local storage is full", {
-        description:
-          "Buzz could not save some local data — read positions may not persist across restarts.",
+        description: `${PRODUCT_NAME} could not save some local data — read positions may not persist across restarts.`,
       });
     })
     .catch(() => {});

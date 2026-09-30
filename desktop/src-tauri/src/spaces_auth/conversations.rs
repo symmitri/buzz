@@ -1,0 +1,371 @@
+//! Explicit native DM creation consents through Gateway. Ordinary sends never
+//! create or restore grants; the agent edge checks current authority per turn.
+use super::{
+    community::Configuration, oauth, read_session, SpacesAuth, SpacesCommunity, CANCELLED,
+};
+use crate::app_state::AppState;
+use nostr::{Event, Keys, Kind};
+use reqwest::{Client, Method};
+use serde::Deserialize;
+use tauri::Manager;
+use zeroize::Zeroizing;
+
+const DENIED: &str =
+    "This agent could not connect to the conversation. Open the conversation again to retry.";
+const ACCESS_DENIED: &str = "You do not have access to enable this agent in this conversation.";
+const SETUP_REQUIRED: &str =
+    "This agent's conversation connection is not set up yet. Ask its operator to check the setup.";
+const SETUP_CHANGED: &str =
+    "This conversation's agent connection has changed. Ask its operator to check the setup.";
+const UNAVAILABLE: &str =
+    "Agent conversation setup is temporarily unavailable. Try opening the conversation again later.";
+const UNCONFIRMED: &str =
+    "Could not confirm the agent's conversation setup. Try opening the conversation again.";
+
+// Only exact Gateway error codes select setup guidance. Never display a server
+// body, provider error, request URL or credential, or infer runtime health.
+fn consent_error(status: u16, body: &[u8]) -> &'static str {
+    #[derive(Deserialize)]
+    struct Failure {
+        error: String,
+    }
+    let failure = serde_json::from_slice::<Failure>(body).ok();
+    let code = failure.as_ref().map(|value| value.error.as_str());
+    match (status, code) {
+        (401, _) => {
+            "Your company sign-in needs attention. Reconnect before enabling agent replies."
+        }
+        (403, _) => ACCESS_DENIED,
+        (409, Some("buzz_agent_not_ready"))
+        | (503, Some("buzz_owned_conversations_unavailable")) => SETUP_REQUIRED,
+        (409, Some("buzz_identity_conflict")) => SETUP_CHANGED,
+        (408 | 429 | 500..=599, _) => UNAVAILABLE,
+        _ => UNCONFIRMED,
+    }
+}
+
+// Consent is an explicit mutation, never retried here. An unreadable response
+// may follow a committed grant, so it cannot be described as a confirmed denial.
+async fn consent_receipt(request: reqwest::RequestBuilder) -> Result<Receipt, String> {
+    let mut response = request
+        .header("Cache-Control", "no-store")
+        .send()
+        .await
+        .map_err(|_| UNCONFIRMED.to_string())?;
+    let status = response.status();
+    let limit = if status.is_success() { 64_000 } else { 4096 };
+    if response
+        .content_length()
+        .is_some_and(|length| length > limit)
+    {
+        return Err(UNCONFIRMED.into());
+    }
+    let mut body = Zeroizing::new(Vec::new());
+    while let Some(chunk) = response
+        .chunk()
+        .await
+        .map_err(|_| UNCONFIRMED.to_string())?
+    {
+        if body.len().saturating_add(chunk.len()) > limit as usize {
+            return Err(UNCONFIRMED.into());
+        }
+        body.extend_from_slice(&chunk);
+    }
+    if !status.is_success() {
+        return Err(consent_error(status.as_u16(), &body).into());
+    }
+    serde_json::from_slice(&body).map_err(|_| UNCONFIRMED.into())
+}
+
+#[derive(Deserialize)]
+struct Agent {
+    agent_id: String,
+    pubkey: String,
+}
+
+#[derive(Deserialize)]
+struct Person {
+    pubkey: String,
+}
+
+#[derive(Deserialize)]
+struct Directory {
+    #[serde(flatten)]
+    connection: Configuration,
+    agents: Vec<Agent>,
+    people: Vec<Person>,
+    #[serde(default)]
+    company_agent_ids: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct Receipt {
+    channel_id: String,
+    agents: Vec<ReceiptAgent>,
+}
+
+#[derive(Deserialize)]
+struct ReceiptAgent {
+    agent_id: String,
+    version: u64,
+    audience_id: String,
+    visibility: String,
+}
+
+fn exact_receipt(receipt: &Receipt, channel: &str, agents: &[String], company: &[String]) -> bool {
+    let mut received: Vec<_> = receipt
+        .agents
+        .iter()
+        .map(|agent| agent.agent_id.clone())
+        .collect();
+    received.sort();
+    receipt.channel_id == channel
+        && received == agents
+        && receipt.agents.iter().all(|agent| {
+            agent.version > 0
+                && !agent.audience_id.is_empty()
+                && agent.audience_id.len() <= 256
+                && if company.contains(&agent.agent_id) {
+                    agent.visibility == "shared"
+                } else {
+                    agent.visibility == "shared" || agent.visibility == "private"
+                }
+        })
+}
+
+/// Only called after an explicit native DM-open action. The renderer supplies
+/// neither Agent IDs nor a consent proof: both are independently read here.
+pub(crate) async fn consent(
+    state: &AppState,
+    relay: &str,
+    keys: &Keys,
+    channel: &str,
+    metadata: &Event,
+    participants: &[String],
+) -> Result<(), String> {
+    if crate::build_identity::demo_slug() != Some("spaces-alpha") {
+        return Ok(());
+    }
+    let app = state
+        .app_handle
+        .lock()
+        .map_err(|_| CANCELLED.to_string())?
+        .clone()
+        .ok_or(CANCELLED)?;
+    let auth = app.state::<SpacesAuth>();
+    let community = app.state::<SpacesCommunity>();
+    let (generation, cancel, expected) = {
+        let operation = auth.0.lock().map_err(|_| CANCELLED.to_string())?;
+        let ready = community.ready.lock().map_err(|_| CANCELLED.to_string())?;
+        let (generation, admitted) = ready.as_ref().ok_or(CANCELLED)?;
+        if *generation != operation.generation
+            || operation.cancel.is_cancelled()
+            || admitted.config.relay_url != relay
+            || admitted.keys.public_key() != keys.public_key()
+        {
+            return Err(CANCELLED.into());
+        }
+        (
+            *generation,
+            operation.cancel.clone(),
+            admitted.config.clone(),
+        )
+    };
+    let storage = SpacesAuth(auth.0.clone());
+    let session = tokio::task::spawn_blocking(move || storage.current(generation, read_session))
+        .await
+        .map_err(|_| CANCELLED.to_string())??
+        .ok_or(CANCELLED)?;
+    let client = oauth::client()?;
+    tokio::select! {
+        biased;
+        _ = cancel.cancelled() => return Err(CANCELLED.into()),
+        result = approve(&client, &session, oauth::GATEWAY, &expected, keys, channel, metadata, participants) => result?,
+    }
+    auth.current(generation, || Ok(()))
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn approve(
+    client: &Client,
+    session: &oauth::Session,
+    gateway: &str,
+    expected: &Configuration,
+    keys: &Keys,
+    channel: &str,
+    metadata: &Event,
+    participants: &[String],
+) -> Result<(), String> {
+    let directory: Directory = oauth::json(
+        client
+            .get(format!("{gateway}/v1/space/buzz/config"))
+            .bearer_auth(&session.access_token)
+            .header("X-Axis-Buzz-Environment", "alpha"),
+    )
+    .await?;
+    directory.connection.validate(session)?;
+    if directory.connection != *expected
+        || directory.agents.len() > 1000
+        || directory.people.len() > 1000
+    {
+        return Err(CANCELLED.into());
+    }
+    let own_pubkey = keys.public_key().to_hex();
+    let self_dm = participants.len() == 1 && participants[0] == own_pubkey;
+    let mut explicit_participants = participants.to_vec();
+    explicit_participants.sort();
+    if explicit_participants.is_empty()
+        || explicit_participants.len() > 8
+        || explicit_participants
+            .windows(2)
+            .any(|pair| pair[0] == pair[1])
+        || explicit_participants.iter().any(|participant| {
+            participant.len() != 64
+                || !participant
+                    .bytes()
+                    .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        })
+        || explicit_participants
+            .iter()
+            .any(|participant| participant == &own_pubkey)
+            && !self_dm
+    {
+        return Err(DENIED.into());
+    }
+    let mut agents = Vec::new();
+    for participant in participants {
+        if participant == &own_pubkey {
+            continue;
+        }
+        let matches: Vec<_> = directory
+            .agents
+            .iter()
+            .filter(|agent| agent.pubkey == *participant)
+            .collect();
+        if matches.len() == 1 {
+            agents.push(matches[0].agent_id.clone());
+        } else if !matches.is_empty()
+            || !directory
+                .people
+                .iter()
+                .any(|person| person.pubkey == *participant)
+        {
+            return Err("A participant is no longer available in your company.".into());
+        }
+    }
+    if agents.is_empty() && !self_dm {
+        return Ok(());
+    }
+    agents.sort();
+    if agents.len() > 8 || agents.windows(2).any(|pair| pair[0] == pair[1]) {
+        return Err(DENIED.into());
+    }
+    let url = format!("{}/query", expected.relay_url);
+    let body = serde_json::to_vec(&serde_json::json!([{"kinds":[39002],"authors":[expected.relay_pubkey],"#d":[channel],"limit":1}]))
+        .map_err(|_| DENIED.to_string())?;
+    let auth = crate::relay::build_nip98_auth_header_for_keys(keys, &Method::POST, &url, &body)?;
+    let membership: Vec<Event> = oauth::json(
+        client
+            .post(url)
+            .header("Authorization", auth)
+            .header("Content-Type", "application/json")
+            .body(body),
+    )
+    .await?;
+    if membership.len() != 1
+        || metadata.kind != Kind::Custom(39000)
+        || membership[0].kind != Kind::Custom(39002)
+        || [metadata, &membership[0]].iter().any(|event| {
+            event.verify().is_err()
+                || event.pubkey.to_hex() != expected.relay_pubkey
+                || event
+                    .tags
+                    .iter()
+                    .filter(|tag| tag.as_slice().first().is_some_and(|name| name == "d"))
+                    .map(|tag| tag.as_slice().to_vec())
+                    .collect::<Vec<_>>()
+                    != vec![vec!["d".to_string(), channel.to_string()]]
+        })
+    {
+        return Err(DENIED.into());
+    }
+    let mut wanted = participants.to_vec();
+    wanted.push(own_pubkey.clone());
+    wanted.sort();
+    wanted.dedup();
+    let mut members: Vec<_> = membership[0]
+        .tags
+        .iter()
+        .filter(|tag| tag.as_slice().first().is_some_and(|name| name == "p"))
+        .map(|tag| {
+            let values = tag.as_slice();
+            // The canonical relay emits NIP-29 [p, key, "", role]. Retain
+            // legacy two-field membership, but never ignore malformed p tags.
+            if !(values.len() == 2
+                || (values.len() == 4 && values[2].is_empty() && !values[3].is_empty()))
+                || values[1].len() != 64
+                || !values[1]
+                    .bytes()
+                    .all(|c| c.is_ascii_digit() || (b'a'..=b'f').contains(&c))
+            {
+                return Err(DENIED.to_string());
+            }
+            Ok(values[1].clone())
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    members.sort();
+    if members != wanted {
+        return Err(DENIED.into());
+    }
+    if self_dm {
+        let mut metadata_members: Vec<_> = metadata
+            .tags
+            .iter()
+            .filter(|tag| tag.as_slice().first().is_some_and(|name| name == "p"))
+            .map(|tag| {
+                let values = tag.as_slice();
+                if values.len() != 2
+                    || values[1].len() != 64
+                    || !values[1]
+                        .bytes()
+                        .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+                {
+                    return Err(DENIED.to_string());
+                }
+                Ok(values[1].clone())
+            })
+            .collect::<Result<Vec<_>, String>>()?;
+        metadata_members.sort();
+        let type_tags: Vec<_> = metadata
+            .tags
+            .iter()
+            .filter(|tag| tag.as_slice().first().is_some_and(|name| name == "t"))
+            .map(|tag| tag.as_slice().to_vec())
+            .collect();
+        let private_tags: Vec<_> = metadata
+            .tags
+            .iter()
+            .filter(|tag| tag.as_slice().first().is_some_and(|name| name == "private"))
+            .map(|tag| tag.as_slice().to_vec())
+            .collect();
+        if metadata_members != wanted
+            || type_tags != vec![vec!["t".to_string(), "dm".to_string()]]
+            || private_tags != vec![vec!["private".to_string()]]
+        {
+            return Err(DENIED.into());
+        }
+        return Ok(());
+    }
+    let receipt = consent_receipt(client.post(format!("{gateway}/v1/space/buzz/conversations"))
+        .bearer_auth(&session.access_token).header("X-Axis-Buzz-Environment", "alpha")
+        .json(&serde_json::json!({"agent_ids":agents,"metadata":metadata,"membership":membership[0]})))
+        .await?;
+    if !exact_receipt(&receipt, channel, &agents, &directory.company_agent_ids) {
+        return Err(UNCONFIRMED.into());
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[path = "conversations_tests.rs"]
+mod tests;

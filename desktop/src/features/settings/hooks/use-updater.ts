@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
-import { isAutoUpdateSupported } from "@/shared/api/tauri";
+import { isAutoUpdateSupported, invokeTauri } from "@/shared/api/tauri";
 
 export type UpdateStatus =
   | { state: "idle" }
@@ -103,11 +103,21 @@ export function useUpdater() {
       return;
     }
 
-    const update = updateRef.current;
-    if (!update) {
+    if (import.meta.env?.VITE_SPACES_ALPHA === "1") {
+      installInFlightRef.current = true;
+      setStatus({ state: "installing" });
+      try {
+        await invokeTauri<void>("spaces_install_update");
+        await relaunch();
+      } catch (err) {
+        setStatus({ state: "error", message: toErrorMessage(err) });
+      } finally {
+        installInFlightRef.current = false;
+      }
       return;
     }
-
+    const update = updateRef.current;
+    if (!update) return;
     installInFlightRef.current = true;
     try {
       setStatus({ state: "installing" });
@@ -145,6 +155,15 @@ export function useUpdater() {
           setStatus({ state: "checking" });
         }
 
+        if (import.meta.env?.VITE_SPACES_ALPHA === "1") {
+          const ready = await invokeTauri<{ version: string } | null>(
+            "spaces_prepare_update",
+          );
+          if (ready) setStatus({ state: "ready" });
+          else if (!background || manualResultRequestedRef.current)
+            setStatus({ state: "up-to-date" });
+          return;
+        }
         const update = await check({
           headers: { "Cache-Control": "no-cache" },
         });
