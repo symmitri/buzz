@@ -99,6 +99,18 @@ export function getMentionableAgentPubkeys({
   );
 
   for (const agent of relayAgents ?? []) {
+    if (agent.companyAgentId) {
+      // Canonical company identities do not have a legacy owner policy.
+      // The native projection proves current membership only in this channel;
+      // publication revalidates it and Gateway still admits the actual turn.
+      if (
+        eligibilityScope.type === "channel" &&
+        agent.channelIds.includes(eligibilityScope.channelId)
+      ) {
+        pubkeys.add(normalizePubkey(agent.pubkey));
+      }
+      continue;
+    }
     const isAllowed =
       eligibilityScope.type === "managed-only"
         ? false

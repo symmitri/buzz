@@ -13,7 +13,11 @@ export function UpdateChecker() {
     <section className="min-w-0" data-testid="settings-updates">
       <SettingsSectionHeader
         title="Software Updates"
-        description="Keep Buzz up to date with the latest features and fixes."
+        description={
+          import.meta.env?.VITE_SPACES_ALPHA === "1"
+            ? "Spaces Alpha development updates."
+            : "Keep Buzz up to date with the latest features and fixes."
+        }
       />
 
       <SettingsOptionGroup title="Update status">
@@ -150,7 +154,7 @@ export function UpdateChecker() {
               </p>
             </div>
             <Button size="sm" onClick={installAndRelaunch}>
-              Update Now
+              Restart and Update
             </Button>
           </SettingsOptionRow>
         )}

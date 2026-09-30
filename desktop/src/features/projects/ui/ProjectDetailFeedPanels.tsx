@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import {
   commitAuthorPubkeysFromPullRequests,
   contributorKey,
@@ -96,7 +98,9 @@ export function ContributorsPanel({
       profileLinked: matchedPubkey !== null,
       reviewCount: signedCounts?.reviews ?? null,
       role: signedPubkey
-        ? matchedProfile?.nip05Handle || contributor.email || "Buzz contributor"
+        ? matchedProfile?.nip05Handle ||
+          contributor.email ||
+          `${PRODUCT_NAME} contributor`
         : heuristicProfile
           ? `${
               heuristicProfile.profile.nip05Handle ||
@@ -135,7 +139,7 @@ export function ContributorsPanel({
         reviewCount: signedCounts.reviews,
         role:
           profile?.nip05Handle ||
-          (isAgent ? "Agent contributor" : "Buzz contributor"),
+          (isAgent ? "Agent contributor" : `${PRODUCT_NAME} contributor`),
         taskCount: signedCounts.tasks,
       };
     });

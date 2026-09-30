@@ -8,6 +8,7 @@ import type { UserSearchResult } from "@/shared/api/types";
 import { cn } from "@/shared/lib/cn";
 import { truncateNpub } from "@/shared/lib/pubkey";
 
+import { isSelfDmRecipient } from "./selfDm";
 import { formatRecipientName } from "./useNewMessageRecipients";
 
 const RESULT_ROW_INSET_DIVIDER_CLASS =
@@ -82,7 +83,8 @@ export function NewMessageResultRow({
   ownerProfiles?: UserProfileLookup;
   user: UserSearchResult;
 }) {
-  const name = formatRecipientName(user);
+  const self = isSelfDmRecipient(user.pubkey, currentPubkey);
+  const name = formatRecipientName(user, currentPubkey);
   const ownerLabel = formatOwnerLabel(
     user.ownerPubkey,
     currentPubkey,
@@ -95,7 +97,7 @@ export function NewMessageResultRow({
       data-keyboard-highlighted={isKeyboardHighlighted ? "true" : undefined}
     >
       <button
-        aria-label={`${isAlreadySelected ? "Already added" : "Add"} ${name}`}
+        aria-label={`${isAlreadySelected ? "Already added" : "Add"} ${name}${self ? ", only you" : ""}`}
         aria-selected={isAlreadySelected || isKeyboardHighlighted}
         className={cn(
           "group/dm-result flex min-h-14 w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left transition-colors duration-150 ease-out hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",
@@ -146,7 +148,14 @@ export function NewMessageResultRow({
               ) : null}
             </div>
           ) : (
-            <HoverRecipientIdentity displayName={name} pubkey={user.pubkey} />
+            <div className="min-w-0">
+              <HoverRecipientIdentity displayName={name} pubkey={user.pubkey} />
+              {self ? (
+                <span className="block truncate text-xs text-muted-foreground">
+                  Only you.
+                </span>
+              ) : null}
+            </div>
           )}
         </div>
       </button>
