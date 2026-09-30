@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { Check, ChevronDown, Copy, Pencil } from "lucide-react";
 import {
   AnimatePresence,
@@ -490,7 +492,7 @@ export function ProfileSettingsCard({
       <div>
         <SettingsSectionHeader
           title="Profile"
-          description="Update how your name, avatar, and bio appear across Buzz."
+          description={`Update how your name, avatar, and bio appear across ${PRODUCT_NAME}.`}
         />
 
         <div className="space-y-3">

@@ -10,12 +10,16 @@ import { useSendMessageMutation } from "@/features/messages/hooks";
 import { getKeyboardSearchSelection } from "@/features/profile/lib/userCandidateSearch";
 import { SelectedRecipientChip } from "@/features/profile/ui/SelectedRecipientChip";
 import { useIdentityQuery } from "@/shared/api/hooks";
-import { normalizePubkey } from "@/shared/lib/pubkey";
 import { Popover, PopoverAnchor, PopoverContent } from "@/shared/ui/popover";
 import { Skeleton } from "@/shared/ui/skeleton";
 
 import { MessageComposer } from "./MessageComposer";
 import { NewMessageResultRow } from "./NewMessageResultRow";
+import {
+  dmChannelMatchesRequest,
+  isSelfDmRecipient,
+  normalizeNewDmRecipients,
+} from "./selfDm";
 import {
   formatRecipientName,
   useNewMessageRecipients,
@@ -168,28 +172,28 @@ export function NewMessageScreen() {
 
   const openDirectMessage = React.useCallback(
     async (additionalParticipantPubkeys: string[] = []) => {
-      const requestedPubkeys = [
-        ...new Set(
+      let requestedPubkeys: string[];
+      try {
+        requestedPubkeys = normalizeNewDmRecipients(
           [
             ...selectedUsers.map((user) => user.pubkey),
             ...additionalParticipantPubkeys,
-          ].map(normalizePubkey),
-        ),
-      ].filter(Boolean);
+          ],
+          currentPubkey,
+        );
+      } catch (error) {
+        setSubmitErrorMessage(
+          error instanceof Error ? error.message : "Choose a valid recipient.",
+        );
+        return null;
+      }
       const preparedDirectMessage = preparedDirectMessageRef.current;
-      const currentNormalizedPubkey = currentPubkey
-        ? normalizePubkey(currentPubkey)
-        : null;
-      const preparedParticipantPubkeys = new Set(
-        (preparedDirectMessage?.participantPubkeys ?? [])
-          .map(normalizePubkey)
-          .filter((pubkey) => pubkey !== currentNormalizedPubkey),
-      );
       if (
         preparedDirectMessage &&
-        preparedParticipantPubkeys.size === requestedPubkeys.length &&
-        requestedPubkeys.every((pubkey) =>
-          preparedParticipantPubkeys.has(pubkey),
+        dmChannelMatchesRequest(
+          preparedDirectMessage.participantPubkeys,
+          requestedPubkeys,
+          currentPubkey,
         )
       ) {
         return preparedDirectMessage;
@@ -300,7 +304,9 @@ export function NewMessageScreen() {
     selectedUsers.length === 0
       ? "Choose a recipient to start a message"
       : selectedUsers.length === 1
-        ? `Message ${formatRecipientName(selectedUsers[0])}`
+        ? isSelfDmRecipient(selectedUsers[0].pubkey, currentPubkey)
+          ? "Write a note"
+          : `Message ${formatRecipientName(selectedUsers[0], currentPubkey)}`
         : `Message ${selectedUsers.length} people`;
 
   return (
@@ -357,7 +363,7 @@ export function NewMessageScreen() {
                     disabled={isPending}
                     inspectionOpen={inspectedRecipientPubkey === user.pubkey}
                     key={user.pubkey}
-                    label={formatRecipientName(user)}
+                    label={formatRecipientName(user, currentPubkey)}
                     onInspectionOpenChange={(inspectionOpen) => {
                       setInspectedRecipientPubkey(
                         inspectionOpen ? user.pubkey : null,

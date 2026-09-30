@@ -216,6 +216,9 @@ pub fn build_observer_control_event(
 
 #[tauri::command]
 pub fn get_nsec(state: State<'_, AppState>) -> Result<String, String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return Err("Alpha keeps your messaging key in macOS Keychain.".into());
+    }
     let keys = state.signing_keys()?;
     keys.secret_key()
         .to_bech32()
@@ -366,6 +369,9 @@ pub async fn import_identity(
     password: Option<String>,
     app_handle: tauri::AppHandle,
 ) -> Result<IdentityInfo, String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return Err("Alpha messaging identity is managed through Google sign-in.".into());
+    }
     tokio::task::spawn_blocking(move || {
         // NIP-49 backups require a passphrase and decrypt entirely in Rust.
         // Raw nsec/hex input follows the existing parser path unchanged.
@@ -494,6 +500,9 @@ pub(crate) fn commit_imported_identity(
 pub async fn persist_current_identity(
     app_handle: tauri::AppHandle,
 ) -> Result<IdentityInfo, String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return Err("Alpha messaging identity is managed through Google sign-in.".into());
+    }
     tokio::task::spawn_blocking(move || {
         let state = app_handle.state::<AppState>();
 
@@ -562,6 +571,14 @@ pub async fn persist_current_identity(
 /// would be confusing.
 #[tauri::command]
 pub async fn sign_out(app: tauri::AppHandle) -> Result<(), String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return crate::spaces_auth::spaces_forget_google_account(
+            app.clone(),
+            app.state(),
+            app.state(),
+        )
+        .await;
+    }
     if is_shared_identity() {
         return Err(
             "Sign out isn't available while BUZZ_SHARE_IDENTITY provides your identity. Unset BUZZ_SHARE_IDENTITY and BUZZ_PRIVATE_KEY, then relaunch to sign out."

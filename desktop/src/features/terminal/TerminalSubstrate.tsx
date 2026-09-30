@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME, TERMINAL_NAME } from "@/shared/lib/product-brand";
 import * as React from "react";
 import { ChevronRight, Maximize2, Minimize2, Plus, X } from "lucide-react";
 
@@ -475,7 +477,7 @@ export function TerminalSubstrate({
 
   return (
     <section
-      aria-label="Buzz Term"
+      aria-label={`${TERMINAL_NAME}`}
       className="buzz-terminal-substrate"
       data-terminal-mode={mode}
       data-terminal-owner={owner}
@@ -505,7 +507,7 @@ export function TerminalSubstrate({
     >
       {mode === "docked" ? (
         <hr
-          aria-label="Resize Buzz Term"
+          aria-label={`Resize ${TERMINAL_NAME}`}
           aria-orientation="horizontal"
           aria-valuemax={Math.round(window.innerHeight * 0.7)}
           aria-valuemin={180}
@@ -646,7 +648,7 @@ export function TerminalSubstrate({
             </div>
           ))}
           <button
-            aria-label="New Buzz Term tab"
+            aria-label={`New ${TERMINAL_NAME} tab`}
             className="buzz-terminal-new-tab"
             onClick={() => runTabAction(onNewSession)}
             type="button"
@@ -657,7 +659,9 @@ export function TerminalSubstrate({
         <div className="buzz-terminal-readout">
           <button
             aria-label={
-              mode === "maximized" ? "Restore Buzz Term" : "Maximize Buzz Term"
+              mode === "maximized"
+                ? `Restore ${TERMINAL_NAME}`
+                : `Maximize ${TERMINAL_NAME}`
             }
             className="buzz-terminal-window-action"
             onClick={() =>
@@ -668,7 +672,7 @@ export function TerminalSubstrate({
             {mode === "maximized" ? <Minimize2 /> : <Maximize2 />}
           </button>
           <button
-            aria-label="Hide Buzz Term"
+            aria-label={`Hide ${TERMINAL_NAME}`}
             className="buzz-terminal-window-action"
             onClick={onHide}
             type="button"
@@ -806,7 +810,9 @@ export function TerminalSubstrate({
         />
       </div>
       <div aria-live="polite" className="sr-only">
-        {owner === "terminal" ? "Buzz Term mode" : "Buzz mode"}
+        {owner === "terminal"
+          ? `${TERMINAL_NAME} mode`
+          : `${PRODUCT_NAME} mode`}
       </div>
     </section>
   );

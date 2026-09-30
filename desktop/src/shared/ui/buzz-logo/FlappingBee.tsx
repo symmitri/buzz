@@ -1,4 +1,6 @@
 import { useId } from "react";
+// Symmitri modification: preserve the loading contract with Alpha branding.
+import { SpacesMark } from "../SpacesBrand";
 
 /**
  * The Buzz bee mark with flapping wings. Geometry is identical to the static
@@ -21,7 +23,7 @@ import { useId } from "react";
  * frame and the flap starts as soon as styles load. Reduced motion falls back
  * to the static silhouette via the CSS media query.
  */
-export function FlappingBee({ className }: { className?: string }) {
+function UpstreamFlappingBee({ className }: { className?: string }) {
   const maskId = `flapping-bee-cutouts-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   // Wing geometry from the 466x309 mark: circles r=91.7 at (91.7, 154.5) and
@@ -115,3 +117,6 @@ export function FlappingBee({ className }: { className?: string }) {
     </div>
   );
 }
+
+export const FlappingBee =
+  import.meta.env?.VITE_SPACES_ALPHA === "1" ? SpacesMark : UpstreamFlappingBee;
