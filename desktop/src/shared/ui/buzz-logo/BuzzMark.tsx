@@ -1,4 +1,6 @@
 import { useId } from "react";
+// Symmitri modification: the Alpha build uses the official company mark.
+import { SpacesMark } from "../SpacesBrand";
 
 /**
  * The finished Buzz mark as a plain static SVG — no SMIL, no scripting, no
@@ -6,7 +8,7 @@ import { useId } from "react";
  * BuzzLogoAnimation morph (v8 variant), rendered in `currentColor`, so it
  * paints complete on the very first frame regardless of animation support.
  */
-export function BuzzMark({ className }: { className?: string }) {
+function UpstreamBuzzMark({ className }: { className?: string }) {
   const maskId = `buzz-mark-cutouts-${useId().replace(/[^a-zA-Z0-9_-]/g, "")}`;
 
   return (
@@ -55,3 +57,6 @@ export function BuzzMark({ className }: { className?: string }) {
     </svg>
   );
 }
+
+export const BuzzMark =
+  import.meta.env?.VITE_SPACES_ALPHA === "1" ? SpacesMark : UpstreamBuzzMark;

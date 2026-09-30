@@ -35,6 +35,8 @@ export async function revalidateAgentMentionPubkeys({
   sharedChannelIds,
   refetchManagedAgents,
   fetchRelayAgents,
+  companyAgentPubkeys = new Set<string>(),
+  fetchCompanyAgents,
   phase = "publish",
 }: {
   phase?: "prepare" | "publish";
@@ -45,6 +47,11 @@ export async function revalidateAgentMentionPubkeys({
   sharedChannelIds: ReadonlySet<string>;
   refetchManagedAgents: () => Promise<DirectoryResult<ManagedAgent[]>>;
   fetchRelayAgents: (pubkeys: string[]) => Promise<RelayAgent[]>;
+  companyAgentPubkeys?: ReadonlySet<string>;
+  fetchCompanyAgents?: (
+    pubkeys: string[],
+    channelId: string,
+  ) => Promise<RelayAgent[]>;
 }) {
   const requestedAgentPubkeys = new Set(
     pubkeys.map(normalizePubkey).filter((pubkey) => agentPubkeys.has(pubkey)),
@@ -53,11 +60,36 @@ export async function revalidateAgentMentionPubkeys({
     return [...pubkeys];
   }
 
-  const [managedResult, relayAgents] = await Promise.all([
+  const companyKeys = [...requestedAgentPubkeys].filter((key) =>
+    companyAgentPubkeys.has(key),
+  );
+  const legacyKeys = [...requestedAgentPubkeys].filter(
+    (key) => !companyAgentPubkeys.has(key),
+  );
+  const [managedResult, legacyAgents, companyAgents] = await Promise.all([
     refetchManagedAgents().catch(() => null),
-    fetchRelayAgents([...requestedAgentPubkeys]).catch(() => null),
+    legacyKeys.length > 0 ? fetchRelayAgents(legacyKeys).catch(() => null) : [],
+    companyKeys.length === 0
+      ? []
+      : eligibilityScope.type === "channel" && fetchCompanyAgents
+        ? fetchCompanyAgents(companyKeys, eligibilityScope.channelId).catch(
+            () => null,
+          )
+        : null,
   ]);
-  const relayDirectoryReady = relayAgents !== null;
+  // A revoked canonical identity must never fall through to a local or legacy
+  // policy. Every selected company key requires its own fresh native proof.
+  if (
+    companyAgents === null ||
+    companyKeys.some(
+      (key) =>
+        !companyAgents.some(
+          (agent) => agent.pubkey === key && Boolean(agent.companyAgentId),
+        ),
+    )
+  )
+    throw new AgentMentionAuthorizationError();
+  const relayAgents = [...(legacyAgents ?? []), ...companyAgents];
   // Each directory proves only its own identities. A failed local runtime
   // query must neither veto fresh relay evidence nor admit stale local data.
   const managedPubkeys = new Set(
@@ -65,18 +97,23 @@ export async function revalidateAgentMentionPubkeys({
       (agent) => normalizePubkey(agent.pubkey),
     ),
   );
+  for (const key of companyKeys) managedPubkeys.delete(key);
   const mentionablePubkeys = getMentionableAgentPubkeys({
     currentPubkey,
     eligibilityScope,
     phase,
     managedAgentPubkeys: managedPubkeys,
-    relayAgents: relayDirectoryReady ? relayAgents : [],
+    relayAgents,
     sharedChannelIds,
   });
   const admittedPubkeys = new Set(
     [...agentPubkeys].filter((pubkey) => {
       const isManagedAgent = managedPubkeys.has(normalizePubkey(pubkey));
-      const directoryReady = isManagedAgent || relayDirectoryReady;
+      const directoryReady =
+        isManagedAgent ||
+        (companyAgentPubkeys.has(pubkey)
+          ? companyAgents !== null
+          : legacyAgents !== null);
       return (
         getAgentMentionAdmission({
           isAgent: true,
@@ -102,6 +139,8 @@ export function useAgentMentionRevalidation({
   eligibilityScope,
   sharedChannelIds,
   refetchManagedAgents,
+  companyAgentPubkeys,
+  fetchCompanyAgents,
 }: {
   agentPubkeys: ReadonlySet<string>;
   getSelectedAgentPubkeys: () => ReadonlySet<string>;
@@ -109,6 +148,11 @@ export function useAgentMentionRevalidation({
   eligibilityScope: AgentEligibilityScope;
   sharedChannelIds: ReadonlySet<string>;
   refetchManagedAgents: () => Promise<DirectoryResult<ManagedAgent[]>>;
+  companyAgentPubkeys?: ReadonlySet<string>;
+  fetchCompanyAgents?: (
+    pubkeys: string[],
+    channelId: string,
+  ) => Promise<RelayAgent[]>;
 }) {
   return React.useCallback(
     (
@@ -136,6 +180,8 @@ export function useAgentMentionRevalidation({
         eligibilityScope: scope,
         sharedChannelIds,
         refetchManagedAgents,
+        companyAgentPubkeys,
+        fetchCompanyAgents,
         fetchRelayAgents: (requestedPubkeys) =>
           revalidateRelayAgents(
             requestedPubkeys,
@@ -149,6 +195,8 @@ export function useAgentMentionRevalidation({
       eligibilityScope,
       getSelectedAgentPubkeys,
       refetchManagedAgents,
+      companyAgentPubkeys,
+      fetchCompanyAgents,
       sharedChannelIds,
     ],
   );

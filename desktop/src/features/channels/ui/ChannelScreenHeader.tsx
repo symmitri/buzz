@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { TERMINAL_NAME } from "@/shared/lib/product-brand";
 import { LogIn, SquareTerminal } from "lucide-react";
 import type * as React from "react";
 
@@ -38,6 +40,7 @@ type ChannelScreenHeaderProps = {
   actionsVariant?: "inline" | "compact";
   activeDmAvatarUrl: string | null;
   activeDmHeaderParticipants: ActiveDmHeaderParticipant[];
+  activeDmIsSelf: boolean;
   activeDmPresenceStatus: PresenceStatus | null;
   chromeWrapperRef?: React.Ref<HTMLDivElement>;
   currentPubkey?: string;
@@ -59,6 +62,7 @@ export function ChannelScreenHeader({
   actionsVariant = "inline",
   activeDmAvatarUrl,
   activeDmHeaderParticipants,
+  activeDmIsSelf,
   activeDmPresenceStatus,
   chromeWrapperRef,
   currentPubkey,
@@ -87,11 +91,13 @@ export function ChannelScreenHeader({
   const terminalButton = activeChannel ? (
     <Button
       aria-label={
-        terminalPanel.mode === "closed" ? "Open Buzz Term" : "Hide Buzz Term"
+        terminalPanel.mode === "closed"
+          ? `Open ${TERMINAL_NAME}`
+          : `Hide ${TERMINAL_NAME}`
       }
       onClick={toggleTerminalPanel}
       size="icon"
-      title="Buzz Term (⌘J)"
+      title={`${TERMINAL_NAME} (⌘J)`}
       type="button"
       variant={terminalPanel.mode === "closed" ? "outline" : "secondary"}
     >
@@ -148,7 +154,15 @@ export function ChannelScreenHeader({
       description={getChannelDescription(activeChannel)}
       leadingContent={
         activeChannel?.channelType === "dm" ? (
-          isGroupDm ? (
+          activeDmIsSelf ? (
+            <UserAvatar
+              avatarUrl={activeDmAvatarUrl}
+              className="mr-1.5 h-8 w-8 text-xs"
+              displayName={activeChannelTitle}
+              size="sm"
+              testId="chat-header-dm-avatar"
+            />
+          ) : isGroupDm ? (
             <DmHeaderParticipantStack
               participants={activeDmHeaderParticipants}
             />
@@ -200,7 +214,7 @@ export function ChannelScreenHeader({
           <ChannelHeaderStatusBadge
             ephemeralDisplay={activeChannelEphemeralDisplay}
           />
-          {!isGroupDm && activeDmParticipant ? (
+          {!activeDmIsSelf && !isGroupDm && activeDmParticipant ? (
             <AgentManagementMarker
               pubkey={activeDmParticipant.pubkey}
               testId="chat-header-agent-provenance"
@@ -210,7 +224,7 @@ export function ChannelScreenHeader({
       }
       title={activeChannelTitle}
       titleAdornment={
-        activeChannel?.channelType === "dm" && !isGroupDm ? (
+        activeChannel?.channelType === "dm" && !activeDmIsSelf && !isGroupDm ? (
           <UserNameIndicators
             className="ml-1"
             pubkey={activeDmParticipant?.pubkey}

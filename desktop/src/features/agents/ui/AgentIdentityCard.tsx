@@ -11,6 +11,7 @@ type AgentIdentityCardProps = {
   avatarUrl?: string | null;
   footerAccessory?: ReactNode;
   dataTestId: string;
+  disabled?: boolean;
   label: string;
   /**
    * Second line under the agent name: the effective description when one
@@ -29,6 +30,7 @@ export function AgentIdentityCard({
   avatar,
   avatarUrl,
   dataTestId,
+  disabled = false,
   footerAccessory,
   label,
   subtitle,
@@ -46,6 +48,7 @@ export function AgentIdentityCard({
     >
       <button
         aria-label={ariaLabel}
+        disabled={disabled}
         className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         onClick={onClick}
         type="button"

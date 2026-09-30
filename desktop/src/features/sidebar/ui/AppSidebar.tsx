@@ -396,6 +396,7 @@ export function AppSidebar({
       directMessages,
       enabled: shouldLoadDmMetadata,
       fallbackDisplayName,
+      profileAvatarUrl: profile?.avatarUrl,
       profileDisplayName: profile?.displayName,
     });
   const sortedDirectMessages = React.useMemo(
@@ -407,6 +408,26 @@ export function AppSidebar({
       ),
     [directMessages, dmChannelLabels, sortModeFor],
   );
+  const selectedDirectMessageIndex = sortedDirectMessages.findIndex(
+    (channel) => channel.id === selectedChannelId,
+  );
+  React.useEffect(() => {
+    if (
+      !isSelectedDirectMessage ||
+      !selectedChannelId ||
+      selectedDirectMessageIndex < 0
+    ) {
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const root = scrollRef.current;
+      const selectedRow = Array.from(
+        root?.querySelectorAll<HTMLElement>("[data-channel-id]") ?? [],
+      ).find((row) => row.dataset.channelId === selectedChannelId);
+      selectedRow?.scrollIntoView({ block: "nearest" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isSelectedDirectMessage, selectedChannelId, selectedDirectMessageIndex]);
   const unreadDmPreviewsBelow = React.useMemo(
     () =>
       unreadMessageBelowChannelIds.flatMap((channelId) => {

@@ -265,6 +265,8 @@ export type RelayMember = {
   createdAt: string;
 };
 export type RelayAgent = {
+  /** Alpha's current Gateway company binding; a discovery hint, never a grant. */
+  companyAgentId?: string;
   pubkey: string;
   ownerPubkey: string | null;
   name: string;

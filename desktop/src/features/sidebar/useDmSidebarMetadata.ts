@@ -1,6 +1,7 @@
 import * as React from "react";
 
 import { usePresenceQuery } from "@/features/presence/hooks";
+import { isSelfDirectMessage } from "@/features/channels/lib/dmParticipantDisplay";
 import { resolveUserLabel } from "@/features/profile/lib/identity";
 import { useUsersBatchQuery } from "@/features/profile/hooks";
 import { resolveChannelDisplayLabel } from "@/features/sidebar/lib/channelLabels";
@@ -11,12 +12,14 @@ export function useDmSidebarMetadata({
   currentPubkey,
   directMessages,
   fallbackDisplayName,
+  profileAvatarUrl,
   profileDisplayName,
   enabled = true,
 }: {
   currentPubkey?: string;
   directMessages: Channel[];
   fallbackDisplayName?: string;
+  profileAvatarUrl?: string | null;
   profileDisplayName?: string | null;
   enabled?: boolean;
 }) {
@@ -55,7 +58,10 @@ export function useDmSidebarMetadata({
   const dmPresenceByChannelId = React.useMemo(
     () =>
       Object.fromEntries(
-        directMessages.map((channel) => {
+        directMessages.flatMap((channel) => {
+          if (isSelfDirectMessage(channel, currentPubkey)) {
+            return [];
+          }
           const otherParticipantPubkey = channel.participantPubkeys.find(
             (pubkey, index) => {
               const normalizedPubkey = pubkey.toLowerCase();
@@ -70,11 +76,14 @@ export function useDmSidebarMetadata({
           );
 
           return [
-            channel.id,
-            otherParticipantPubkey
-              ? (dmPresenceQuery.data?.[otherParticipantPubkey.toLowerCase()] ??
-                "offline")
-              : "offline",
+            [
+              channel.id,
+              otherParticipantPubkey
+                ? (dmPresenceQuery.data?.[
+                    otherParticipantPubkey.toLowerCase()
+                  ] ?? "offline")
+                : "offline",
+            ],
           ];
         }),
       ) satisfies Record<string, PresenceStatus>,
@@ -98,6 +107,21 @@ export function useDmSidebarMetadata({
     () =>
       Object.fromEntries(
         directMessages.map((channel) => {
+          if (isSelfDirectMessage(channel, currentPubkey)) {
+            return [
+              channel.id,
+              [
+                {
+                  avatarUrl: profileAvatarUrl ?? null,
+                  label:
+                    profileDisplayName?.trim() ||
+                    fallbackDisplayName?.trim() ||
+                    "You",
+                  pubkey: channel.participantPubkeys[0] ?? currentPubkey ?? "",
+                },
+              ],
+            ];
+          }
           const participants = channel.participantPubkeys.map(
             (pubkey, index) => ({
               fallbackName: channel.participants[index] ?? null,
@@ -139,7 +163,15 @@ export function useDmSidebarMetadata({
           ];
         }),
       ) satisfies Record<string, SidebarDmParticipant[]>,
-    [currentPubkey, directMessages, dmProfiles, selfDmLabels],
+    [
+      currentPubkey,
+      directMessages,
+      dmProfiles,
+      fallbackDisplayName,
+      profileAvatarUrl,
+      profileDisplayName,
+      selfDmLabels,
+    ],
   );
 
   return {

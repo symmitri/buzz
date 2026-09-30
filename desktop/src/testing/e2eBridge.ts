@@ -1906,6 +1906,42 @@ function normalizeParticipantPubkeys(pubkeys: string[]) {
   return [...new Set(pubkeys.map((pubkey) => pubkey.toLowerCase()))].sort();
 }
 
+const MAX_DM_RECIPIENTS = 8;
+
+function normalizeDmRecipients(pubkeys: string[], currentPubkey: string) {
+  if (pubkeys.length === 0 || pubkeys.length > MAX_DM_RECIPIENTS) {
+    throw new Error("Choose between one and eight recipients.");
+  }
+
+  const normalizedPubkeys: string[] = [];
+  const seen = new Set<string>();
+  for (const pubkey of pubkeys) {
+    if (!/^[0-9a-f]{64}$/i.test(pubkey)) {
+      throw new Error("Choose a valid person before sending.");
+    }
+
+    const normalizedPubkey = pubkey.toLowerCase();
+    if (seen.has(normalizedPubkey)) {
+      throw new Error("Choose each recipient once.");
+    }
+    seen.add(normalizedPubkey);
+    normalizedPubkeys.push(normalizedPubkey);
+  }
+
+  if (
+    normalizedPubkeys.includes(currentPubkey.toLowerCase()) &&
+    normalizedPubkeys.length !== 1
+  ) {
+    throw new Error("Message yourself separately from other people.");
+  }
+
+  return normalizedPubkeys;
+}
+
+function mockDmAudienceKey(pubkeys: string[]) {
+  return normalizeParticipantPubkeys(pubkeys).join(":");
+}
+
 function findMockDmByParticipantPubkeys(pubkeys: string[]) {
   const normalizedPubkeys = normalizeParticipantPubkeys(pubkeys);
 
@@ -1927,6 +1963,18 @@ function findMockDmByParticipantPubkeys(pubkeys: string[]) {
       );
     }) ?? null
   );
+}
+
+function restoreHiddenMockDmByParticipantPubkeys(pubkeys: string[]) {
+  const key = mockDmAudienceKey(pubkeys);
+  const channel = mockHiddenDms.get(key) ?? null;
+  if (!channel) {
+    return null;
+  }
+
+  mockHiddenDms.delete(key);
+  mockChannels.push(channel);
+  return channel;
 }
 
 function getMockIdentity() {
@@ -3321,6 +3369,7 @@ const mockChannels: MockChannel[] = [
 ];
 
 const mockMessages = new Map<string, RelayEvent[]>();
+const mockHiddenDms = new Map<string, MockChannel>();
 const deferredSendMessageLiveEchoes: Array<{
   channelId: string;
   event: RelayEvent;
@@ -7348,17 +7397,15 @@ async function handleOpenDm(
   assertExpectedRelayScope(args.expectedRelayUrl, config);
   assertExpectedSigner(args.expectedSignerPubkey, config);
 
-  const normalizedPubkeys = normalizeParticipantPubkeys(args.pubkeys);
-  if (normalizedPubkeys.length === 0) {
-    throw new Error("Select at least one person to start a DM.");
-  }
-
   const currentPubkey = getMockMemberPubkey(config).toLowerCase();
+  const normalizedPubkeys = normalizeDmRecipients(args.pubkeys, currentPubkey);
   const participantPubkeys = normalizeParticipantPubkeys([
     currentPubkey,
     ...normalizedPubkeys.filter((pubkey) => pubkey !== currentPubkey),
   ]);
-  const existingChannel = findMockDmByParticipantPubkeys(participantPubkeys);
+  const existingChannel =
+    findMockDmByParticipantPubkeys(participantPubkeys) ??
+    restoreHiddenMockDmByParticipantPubkeys(participantPubkeys);
   if (existingChannel) {
     return toRawChannel(existingChannel, config);
   }
@@ -7447,8 +7494,13 @@ async function handleHideDm(
     if (index === -1) {
       throw new Error(`DM ${args.channelId} not found.`);
     }
-    // Remove from mock list (simulates hiding from sidebar).
+    const channel = mockChannels[index];
+    if (channel?.channel_type !== "dm") {
+      throw new Error(`DM ${args.channelId} not found.`);
+    }
+
     mockChannels.splice(index, 1);
+    mockHiddenDms.set(mockDmAudienceKey(channel.participant_pubkeys), channel);
     return;
   }
 
@@ -7868,6 +7920,15 @@ async function handleAddChannelMembers(
       added.push(pubkey);
     }
 
+    // `open_dm` accepts explicit recipients, excluding the current person
+    // unless this is an own-only DM. Keep that strict contract when this mock
+    // expands an existing audience on behalf of older add-member callers.
+    const currentPubkey = normalizePubkey(getMockMemberPubkey(config));
+    const expandedDmRecipients = [
+      ...channel.members.map((member) => member.pubkey),
+      ...added,
+    ].filter((pubkey) => normalizePubkey(pubkey) !== currentPubkey);
+
     // DM participant sets are immutable. Adding a member creates or reuses a
     // separate DM for the expanded set instead of mutating the source channel.
     const targetChannel =
@@ -7876,10 +7937,7 @@ async function handleAddChannelMembers(
             (
               await handleOpenDm(
                 {
-                  pubkeys: [
-                    ...channel.members.map((member) => member.pubkey),
-                    ...added,
-                  ],
+                  pubkeys: expandedDmRecipients,
                 },
                 config,
               )

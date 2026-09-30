@@ -1,3 +1,6 @@
+import { SpacesMark } from "@/shared/ui/SpacesBrand";
+// Symmitri modification: Spaces labels for the Alpha build.
+import { IS_SPACES_ALPHA, PRODUCT_NAME } from "@/shared/lib/product-brand";
 import {
   Check,
   ChevronDown,
@@ -93,7 +96,11 @@ export function CommunityEmojiIcon({
   }
   return (
     <span aria-hidden="true" className={className}>
-      <span className="-translate-y-px leading-normal">🐝</span>
+      {IS_SPACES_ALPHA ? (
+        <SpacesMark className="h-3.5 w-3.5" />
+      ) : (
+        <span className="-translate-y-px leading-normal">🐝</span>
+      )}
     </span>
   );
 }
@@ -174,8 +181,7 @@ export function CommunitySwitcher({
       setDropdownOpen(false);
       if (result?.status === "already-absent") {
         toast("Community removed", {
-          description:
-            "You were no longer a member, so Buzz removed the community from this device.",
+          description: `You were no longer a member, so ${PRODUCT_NAME} removed the community from this device.`,
         });
       }
     } catch (error) {
