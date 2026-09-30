@@ -17,6 +17,8 @@ import type { AcpRuntime } from "@/shared/api/types";
 import { Button } from "@/shared/ui/button";
 import { ChooserDialogContent } from "@/shared/ui/chooser-dialog-content";
 import { Dialog } from "@/shared/ui/dialog";
+import { IS_SPACES_ALPHA } from "@/shared/lib/product-brand";
+import { AlphaChannelBotDialog } from "./AlphaChannelBotDialog";
 
 type AddChannelBotDialogProps = {
   channelId: string | null;
@@ -52,7 +54,19 @@ function formatBatchFailureSummary(
     .join("; ");
 }
 
-export function AddChannelBotDialog({
+export function AddChannelBotDialog(props: AddChannelBotDialogProps) {
+  return IS_SPACES_ALPHA ? (
+    <AlphaChannelBotDialog
+      channelId={props.channelId}
+      open={props.open}
+      onOpenChange={props.onOpenChange}
+    />
+  ) : (
+    <LocalChannelBotDialog {...props} />
+  );
+}
+
+function LocalChannelBotDialog({
   channelId,
   open,
   providers,

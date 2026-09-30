@@ -28,6 +28,15 @@ export default defineConfig(async ({ mode }) => {
     ],
     resolve: {
       alias: {
+        "@axis/gateway-client/work-release": path.resolve(__dirname, "../.spaces-axis-contracts/work-release.ts"),
+        "@axis/buzz/event-contract": path.resolve(__dirname, "../.spaces-axis-contracts/buzz-event-contract.ts"),
+        "@axis/buzz/disclosure-contract": path.resolve(__dirname, "../.spaces-axis-contracts/buzz-disclosure-contract.ts"),
+        "@axis/buzz/release-contract": path.resolve(__dirname, "../.spaces-axis-contracts/buzz-release-contract.ts"),
+        "@axis/buzz/reviewed-publication-contract": path.resolve(__dirname, "../.spaces-axis-contracts/buzz-reviewed-publication-contract.ts"),
+        "@axis/gateway-client/work-task-status": path.resolve(
+          __dirname,
+          "../.spaces-axis-contracts/work-task-status.ts",
+        ),
         "@": "/src",
         "@features-manifest": path.resolve(
           __dirname,

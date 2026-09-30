@@ -1,3 +1,4 @@
+// Symmitri modification: opt-in branded themes through the existing appearance contract.
 import {
   type ReactNode,
   createContext,
@@ -13,6 +14,7 @@ import { invokeTauri } from "@/shared/api/tauri";
 import { isMacPlatform } from "@/shared/lib/platform";
 import { getStorageItem } from "@/shared/lib/safeStorage";
 import { createThemeVars, hexToHsl } from "./adaptive-theme";
+import { getSymmitriPalette } from "./symmitri-themes";
 import {
   SYNTAX_THEMES,
   type SyntaxThemeName,
@@ -255,7 +257,10 @@ function resolveEffectiveAccent(
   themeName: string,
   accentColor: string,
 ): string {
-  return isBuzzTheme(themeName) ? NEUTRAL_ACCENT : accentColor;
+  return (
+    getSymmitriPalette(themeName)?.accent ??
+    (isBuzzTheme(themeName) ? NEUTRAL_ACCENT : accentColor)
+  );
 }
 
 /** Toggle the Buzz-specific gradient marker independently from glass. */
@@ -435,11 +440,17 @@ async function applyTheme(name: SyntaxThemeName): Promise<{
   if (requestToken !== themeApplyRequest) return null;
 
   const info = extractThemeInfo(name, themeData);
-  const { isDark, vars } = createThemeVars(info.bg, info.fg, info.comment, {
-    added: info.added,
-    deleted: info.deleted,
-    modified: info.modified,
-  });
+  const { isDark, vars } = createThemeVars(
+    info.bg,
+    info.fg,
+    info.comment,
+    {
+      added: info.added,
+      deleted: info.deleted,
+      modified: info.modified,
+    },
+    name,
+  );
 
   const root = document.documentElement;
   for (const [key, value] of Object.entries(vars)) {

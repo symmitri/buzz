@@ -2,7 +2,10 @@ import {
   resolveUserLabel,
   type UserProfileLookup,
 } from "@/features/profile/lib/identity";
-import { formatDmParticipantDisplayName } from "@/features/channels/lib/dmParticipantDisplay";
+import {
+  formatDmParticipantDisplayName,
+  isSelfDirectMessage,
+} from "@/features/channels/lib/dmParticipantDisplay";
 import type { Channel } from "@/shared/api/types";
 
 function isGenericDmChannelName(name: string) {
@@ -21,6 +24,10 @@ export function resolveChannelDisplayLabel(
   currentPubkey: string | undefined,
   profiles: UserProfileLookup | undefined,
 ) {
+  if (isSelfDirectMessage(channel, currentPubkey)) {
+    return "Notes to yourself";
+  }
+
   if (channel.channelType !== "dm" || !isGenericDmChannelName(channel.name)) {
     return channel.name;
   }

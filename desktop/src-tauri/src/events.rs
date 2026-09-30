@@ -747,7 +747,9 @@ pub fn build_dm_open(pubkeys: &[String]) -> Result<EventBuilder, String> {
         check_pubkey(pk)?;
         tags.push(tag(vec!["p", &pk.to_ascii_lowercase()])?);
     }
-    Ok(EventBuilder::new(Kind::Custom(41010), "").tags(tags))
+    Ok(EventBuilder::new(Kind::Custom(41010), "")
+        .tags(tags)
+        .allow_self_tagging())
 }
 
 /// Kind 41012 — hide a DM channel from the user's listing.
@@ -848,6 +850,24 @@ mod tests {
         assert_eq!(tags[2], vec!["reason", "returned"]);
         assert_eq!(tags.len(), 3, "self unarchive must not carry auth tag");
         assert_eq!(event.pubkey.to_hex(), TARGET_HEX);
+    }
+
+    #[test]
+    fn dm_open_preserves_an_explicit_own_key_tag() {
+        const SELF_HEX: &str = "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798";
+        let builder = build_dm_open(&[SELF_HEX.to_string()]).unwrap();
+        let keys = Keys::parse("0000000000000000000000000000000000000000000000000000000000000001")
+            .unwrap();
+        let event = builder.sign_with_keys(&keys).unwrap();
+        assert_eq!(event.pubkey.to_hex(), SELF_HEX);
+        assert_eq!(
+            event
+                .tags
+                .iter()
+                .map(|tag| tag.as_slice().to_vec())
+                .collect::<Vec<_>>(),
+            vec![vec!["p", SELF_HEX]]
+        );
     }
 
     const CH_ID: &str = "11111111-1111-4111-8111-111111111111";

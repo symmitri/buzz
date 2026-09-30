@@ -314,7 +314,7 @@ test("home inbox selection survives reload and back restores it", async ({
   await expect.poll(() => page.url()).toBe(defaultUrl);
 });
 
-test("settings is a route: section survives reload, closing returns to the previous panel state", async ({
+test("settings is a route: Profile tab survives reload and Back restores thread drafts", async ({
   page,
 }) => {
   await page.goto("/");
@@ -330,10 +330,18 @@ test("settings is a route: section survives reload, closing returns to the previ
   await rootMessage.getByRole("button", { name: "Reply" }).click();
   const threadPanel = page.getByTestId("message-thread-panel");
   await expect(threadPanel).toBeVisible();
+  const threadDraft = threadPanel.getByTestId("message-input");
+  await threadDraft.fill("Keep the original work reply draft");
   const channelUrl = page.url();
 
-  await openSettings(page);
+  await openSettings(page, "profile");
   await expect(page).toHaveURL(/#\/settings/);
+  await page.getByRole("tab", { name: "Connections", exact: true }).click();
+  await expect(page).toHaveURL(/profileTab=connections/);
+  await page.reload();
+  await expect(
+    page.getByRole("tab", { name: "Connections", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
 
   // Section switches rewrite the settings entry (replace, not push).
   await page.getByTestId("settings-nav-notifications").click();
@@ -347,6 +355,7 @@ test("settings is a route: section survives reload, closing returns to the previ
   await expect.poll(() => page.url()).toBe(channelUrl);
   await expect(page.getByTestId("chat-title")).toHaveText("general");
   await expect(threadPanel).toBeVisible();
+  await expect(threadDraft).toContainText("Keep the original work reply draft");
 });
 
 test("settings shortcut returns without opening search dialog", async ({

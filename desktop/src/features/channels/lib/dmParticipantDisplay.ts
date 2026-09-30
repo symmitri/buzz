@@ -20,8 +20,26 @@ export type DirectMessageIntroParticipant = {
 
 export type DirectMessageIntro = {
   displayName: string;
+  isSelf: boolean;
   participants: DirectMessageIntroParticipant[];
 };
+
+export function isSelfDirectMessage(
+  channel: Channel | null,
+  currentPubkey?: string,
+) {
+  if (
+    channel?.channelType !== "dm" ||
+    channel.participantPubkeys.length !== 1 ||
+    !currentPubkey
+  ) {
+    return false;
+  }
+  return (
+    normalizePubkey(channel.participantPubkeys[0] ?? "") ===
+    normalizePubkey(currentPubkey)
+  );
+}
 
 export function getDmParticipantPreview<T>(participants: readonly T[]) {
   const visibleParticipants = participants.slice(
@@ -65,6 +83,8 @@ export function buildDirectMessageIntro({
     return null;
   }
 
+  const isSelf = isSelfDirectMessage(channel, currentPubkey);
+
   const participants = channel.participantPubkeys.map((pubkey, index) => ({
     fallbackName: channel.participants[index] ?? null,
     pubkey,
@@ -102,7 +122,10 @@ export function buildDirectMessageIntro({
   });
 
   return {
-    displayName: formatDmParticipantDisplayName(introParticipants),
+    displayName: isSelf
+      ? "Notes to yourself"
+      : formatDmParticipantDisplayName(introParticipants),
+    isSelf,
     participants: introParticipants,
   };
 }

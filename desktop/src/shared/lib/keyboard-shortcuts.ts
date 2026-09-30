@@ -64,6 +64,14 @@ export const KEYBOARD_SHORTCUTS: KeyboardShortcut[] = [
     category: "Navigation",
   },
   {
+    id: "open-profile-settings",
+    label: "Profile",
+    description: "Open your Profile settings",
+    keys: "⇧⌘P",
+    keysWindows: "Shift+Ctrl+P",
+    category: "Navigation",
+  },
+  {
     id: "go-back",
     label: "Go back",
     description: "Navigate to the previous page",

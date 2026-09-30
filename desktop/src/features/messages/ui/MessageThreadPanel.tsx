@@ -20,6 +20,8 @@ import type { VideoReviewPresentation } from "@/features/messages/lib/videoRevie
 import type { UserProfileLookup } from "@/features/profile/lib/identity";
 import type { Channel } from "@/shared/api/types";
 import type { ThreadPanelLayoutProps } from "@/features/channels/lib/threadPanelLayout";
+import { WorkConsentThread } from "./WorkConsentThread";
+import { WorkReleaseThread } from "./WorkReleaseThread";
 import { useEscapeKey } from "@/shared/hooks/useEscapeKey";
 import { useIsThreadPanelOverlay } from "@/shared/hooks/use-mobile";
 import { VideoReviewNavigationProvider } from "@/shared/ui/VideoReviewNavigation";
@@ -588,6 +590,21 @@ export function MessageThreadPanel({
             </div>
           </div>
         )}
+
+        {!isHuddleTranscript ? (
+          <WorkConsentThread
+            channelId={channelId}
+            rootEventId={threadHead.id}
+            currentPubkey={currentPubkey}
+          />
+        ) : null}
+        {!isHuddleTranscript ? (
+          <WorkReleaseThread
+            channelId={channelId}
+            rootEventId={threadHead.id}
+            currentPubkey={currentPubkey}
+          />
+        ) : null}
 
         {showThreadHeadDivider ? (
           <div
