@@ -1,0 +1,11 @@
+✔ community selection cannot repeat sign-in or cancel its own admitted session (489.798709ms)
+✔ failed admission leaves a working retry and never mounts cached chat (78.721334ms)
+✔ unmount cancels enrollment and discards a late admitted community (23.63675ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5750.300375

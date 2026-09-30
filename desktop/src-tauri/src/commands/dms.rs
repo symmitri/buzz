@@ -76,6 +76,18 @@ pub(crate) async fn open_dm_with_scope(
     )
     .await?;
 
+    if let Some(event) = metadata.first() {
+        crate::spaces_auth::conversations::consent(
+            state,
+            &api_base_url,
+            &keys,
+            &ack.channel_id,
+            event,
+            &pubkeys,
+        )
+        .await?;
+    }
+
     metadata
         .first()
         .map(|ev| nostr_convert::channel_info_from_event(ev, None, None))

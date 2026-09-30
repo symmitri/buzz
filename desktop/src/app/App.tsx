@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { router } from "@/app/router";
+import { SpacesGoogleSignIn } from "@/features/onboarding/ui/SpacesGoogleSignIn";
 import {
   completeCommunityViewTransition,
   replaceCommunityDestinationRoute,
@@ -803,6 +804,22 @@ export function App() {
         setSharedIdentity(false);
       });
   }, []);
+
+  // Symmitri modification: native Gateway admission precedes vanilla startup.
+  // Persisted onboarding/communities cannot bypass company sign-in.
+  // Explicit e2e bundles remain available for synthetic upstream benchmarks.
+  if (
+    import.meta.env.VITE_SPACES_ALPHA === "1" &&
+    import.meta.env.MODE !== "e2e"
+  ) {
+    return (
+      <SpacesGoogleSignIn>
+        <QueryClientProvider client={queryClient}>
+          <MachineBootstrap sharedIdentity={false} />
+        </QueryClientProvider>
+      </SpacesGoogleSignIn>
+    );
+  }
 
   if (sharedIdentity === null) return <AppLoadingGate />;
 

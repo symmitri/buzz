@@ -10,6 +10,7 @@ import {
 import type { IdentityStorage } from "@/shared/api/types";
 import { Button } from "@/shared/ui/button";
 import { StartupWindowDragRegion } from "@/shared/ui/StartupWindowDragRegion";
+import { SpacesWelcomeTitle } from "@/shared/ui/SpacesBrand";
 import { BackupStep } from "./BackupStep";
 import { DefaultConfigStep } from "./DefaultConfigStep";
 import { DownloadKeyStep } from "./DownloadKeyStep";
@@ -340,11 +341,16 @@ export function MachineOnboardingFlow({
               direction={transitionDirection}
               transitionKey={`machine-identity-${transitionDirection}`}
             >
-              <img
-                alt="Buzz"
-                className="w-full max-w-[600px]"
-                src="/landing/buzz-wordmark.png"
-              />
+              {/* Symmitri modification: Alpha keeps the vanilla onboarding flow. */}
+              {import.meta.env?.VITE_SPACES_ALPHA === "1" ? (
+                <SpacesWelcomeTitle />
+              ) : (
+                <img
+                  alt="Buzz"
+                  className="w-full max-w-[600px]"
+                  src="/landing/buzz-wordmark.png"
+                />
+              )}
               <p className="mt-2 max-w-[560px] text-center text-2xl font-normal leading-none text-foreground">
                 Your people, your agents, your projects —<br />
                 all in one place.
