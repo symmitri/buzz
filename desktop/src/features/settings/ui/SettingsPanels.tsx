@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { IS_SPACES_ALPHA, PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
@@ -35,6 +37,7 @@ import { cn } from "@/shared/lib/cn";
 import { useCommunities } from "@/features/communities/useCommunities";
 import { Badge } from "@/shared/ui/badge";
 import { isBuzzTheme, useTheme } from "@/shared/theme/ThemeProvider";
+import { getSymmitriPalette } from "@/shared/theme/symmitri-themes";
 import {
   LIGHT_THEMES,
   SYNTAX_THEMES,
@@ -76,7 +79,7 @@ import {
   SettingsOptionRow,
 } from "./SettingsOptionGroup";
 import { SegmentedControl } from "@/shared/ui/segmented-control";
-import { ProfileSettingsCard } from "./ProfileSettingsCard";
+import { ProfileSettingsPanel } from "./ProfileSettingsPanel";
 import { UpdateChecker } from "../UpdateChecker";
 import { SettingsSectionHeader } from "./SettingsSectionHeader";
 import { VoiceSettingsCard } from "./VoiceSettingsCard";
@@ -100,6 +103,15 @@ export type SettingsSection =
   | "updates";
 
 export const DEFAULT_SETTINGS_SECTION: SettingsSection = "profile";
+
+export type SettingsProfileTab = "overview" | "connections";
+
+/** Accept only the Profile tabs that the native Settings surface provides. */
+export function isSettingsProfileTab(
+  value: unknown,
+): value is SettingsProfileTab {
+  return value === "overview" || value === "connections";
+}
 
 const SETTINGS_SECTION_VALUES: readonly SettingsSection[] = [
   "profile",
@@ -138,6 +150,8 @@ export type SettingsSectionDescriptor = {
 export type SettingsPanelProps = {
   currentPubkey?: string;
   fallbackDisplayName?: string;
+  profileTab: SettingsProfileTab;
+  onProfileTabChange: (tab: SettingsProfileTab) => void;
   isUpdatingDesktopNotifications: boolean;
   notificationErrorMessage: string | null;
   notificationPermission: DesktopNotificationPermissionState;
@@ -237,6 +251,8 @@ export const settingsSections: SettingsSectionDescriptor[] = [
 ];
 
 function formatThemeLabel(name: string): string {
+  if (IS_SPACES_ALPHA && name === "buzz") return "Spaces";
+  if (IS_SPACES_ALPHA && name === "buzz-dark") return "Spaces Dark";
   return name
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
@@ -335,7 +351,7 @@ function PairedThemeTile({
     >
       <SystemPreferencePreviewFrame
         className={cn(
-          "h-[112px] w-[168px] transition-shadow",
+          "h-[112px] w-[168px] transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
           isActive
             ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
             : "group-hover:ring-2 group-hover:ring-border",
@@ -378,7 +394,7 @@ function SingleThemeTile({
     >
       <ThemePreviewFrame
         className={cn(
-          "h-[112px] w-[168px] transition-shadow",
+          "h-[112px] w-[168px] transition-shadow group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
           isActive
             ? "ring-2 ring-primary ring-offset-2 ring-offset-background"
             : "group-hover:ring-2 group-hover:ring-border",
@@ -441,7 +457,8 @@ function ThemeSettingsCard() {
   // so the accent picker is hidden while a Buzz theme is active. `themeName` is
   // the effective theme, so this also covers System mode resolving to Buzz.
   const buzzThemeSelected = isBuzzTheme(themeName);
-  const accentPickerHidden = buzzThemeSelected;
+  const accentPickerHidden =
+    buzzThemeSelected || Boolean(getSymmitriPalette(themeName));
   const shouldReduceMotion = useReducedMotion();
 
   const previewVarsByTheme = useThemePreviewVars();
@@ -460,7 +477,7 @@ function ThemeSettingsCard() {
   const getVars = (name: SyntaxThemeName) =>
     withAccentPreviewVars(
       previewVarsByTheme[name] ?? getThemeFallbackPreviewVars(name),
-      accentColor,
+      getSymmitriPalette(name)?.accent ?? accentColor,
     );
 
   // All light themes (paired light + light-only)
@@ -638,7 +655,7 @@ function ThemeSettingsCard() {
     >
       <SettingsSectionHeader
         title="Appearance"
-        description="Choose how Buzz looks and feels."
+        description={`Choose how ${PRODUCT_NAME} looks and feels.`}
       />
 
       <SettingsOptionGroupList>
@@ -698,7 +715,7 @@ function ThemeSettingsCard() {
                 className="text-sm font-normal text-muted-foreground/70"
                 data-settings-subcopy
               >
-                Choose the colors used throughout Buzz.
+                Choose the colors used throughout {PRODUCT_NAME}.
               </p>
             </div>
             <button
@@ -806,9 +823,11 @@ export function renderSettingsSection(
   switch (section) {
     case "profile":
       return (
-        <ProfileSettingsCard
+        <ProfileSettingsPanel
           currentPubkey={props.currentPubkey}
           fallbackDisplayName={props.fallbackDisplayName}
+          tab={props.profileTab}
+          onTabChange={props.onProfileTabChange}
         />
       );
     case "notifications":

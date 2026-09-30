@@ -1,4 +1,5 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
+import { spacesTimeZone } from "@/shared/lib/spaces-time-zone";
 import {
   createAuthEvent,
   getRelayWsUrl,
@@ -263,6 +264,9 @@ export class RelayClient {
     for (const tag of extraTags) {
       tags.push(tag);
     }
+
+    const timeZone = spacesTimeZone();
+    if (timeZone) tags.push(["axis-time-zone", timeZone]);
 
     const event = await signRelayEvent({
       kind: KIND_STREAM_MESSAGE,

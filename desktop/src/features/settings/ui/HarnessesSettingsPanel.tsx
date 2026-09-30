@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import * as React from "react";
 import { ExternalLink, Plus, RefreshCw } from "lucide-react";
 import { openUrl } from "@tauri-apps/plugin-opener";
@@ -113,7 +115,7 @@ export function HarnessesSettingsPanel() {
   return (
     <SettingsOptionGroup
       data-testid="settings-harnesses"
-      description="Choose which agent tools Buzz can use on this device."
+      description={`Choose which agent tools ${PRODUCT_NAME} can use on this device.`}
       headerAction={
         <Button
           disabled={isRefreshing}

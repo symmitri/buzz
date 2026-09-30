@@ -67,6 +67,12 @@ import {
   type MentionCandidate,
 } from "./mentionCandidates";
 import { buildMentionCandidates } from "./buildMentionCandidates";
+import { useCompanyChannelMentions } from "./useCompanyChannelMentions";
+import { IS_SPACES_ALPHA } from "@/shared/lib/product-brand";
+import type { ManagedAgent, AgentPersona } from "@/shared/api/types";
+const NO_MANAGED_AGENTS: ManagedAgent[] = [];
+const NO_PERSONAS: AgentPersona[] = [];
+const noManagedAgents = async () => ({ data: NO_MANAGED_AGENTS, error: null });
 const MENTION_DEBOUNCE_MS = 120,
   MENTION_SUGGESTION_LIMIT = 50;
 type UseMentionsOptions = {
@@ -104,10 +110,48 @@ export function useMentions(
   const membersQuery = useChannelMembersQuery(channelId);
   const members = externalMembers ?? membersQuery.data;
   const isArchivedDiscovery = useIsArchivedPredicate();
-  const managedAgentsQuery = useManagedAgentsQuery();
-  const relayAgentsQuery = useRelayAgentsQuery();
+  const legacyManagedAgentsQuery = useManagedAgentsQuery({ enabled: !IS_SPACES_ALPHA });
+  const managedAgentsQuery = IS_SPACES_ALPHA
+    ? { data: NO_MANAGED_AGENTS, error: null, refetch: noManagedAgents }
+    : legacyManagedAgentsQuery;
+  const legacyRelayAgentsQuery = useRelayAgentsQuery({ enabled: !IS_SPACES_ALPHA });
+  const companyMentions = useCompanyChannelMentions(
+    channelId,
+    options?.channelType,
+    currentPubkey,
+  );
+  const companyAgentPubkeys = companyMentions.knownCompanyPubkeys;
+  const relayAgentsQuery = React.useMemo(() => {
+    // Spaces identities come from the exact native/Gateway projection. Cached
+    // local personas and the upstream relay directory are never a fallback.
+    if (IS_SPACES_ALPHA) return { data: companyMentions.data, error: null };
+    const legacyReady = isAgentDirectoryReady({
+      data: legacyRelayAgentsQuery.data,
+      error: legacyRelayAgentsQuery.error,
+    });
+    const companyReady = companyMentions.data !== undefined;
+    return {
+      data:
+        legacyReady || companyReady
+          ? [
+              ...(companyMentions.data ?? []),
+              ...(legacyReady
+                ? (legacyRelayAgentsQuery.data ?? [])
+                : []
+              ).filter((agent) => !companyAgentPubkeys.has(agent.pubkey)),
+            ]
+          : undefined,
+      error: legacyReady || companyReady ? null : legacyRelayAgentsQuery.error,
+    };
+  }, [
+    legacyRelayAgentsQuery.data,
+    legacyRelayAgentsQuery.error,
+    companyMentions.data,
+    companyAgentPubkeys,
+  ]);
   const channelsQuery = useChannelsQuery();
-  const personasQuery = usePersonasQuery();
+  const legacyPersonasQuery = usePersonasQuery({ enabled: !IS_SPACES_ALPHA });
+  const personasQuery = IS_SPACES_ALPHA ? { data: NO_PERSONAS } : legacyPersonasQuery;
   const teamsQuery = useTeamsQuery();
   const managedAgentDirectoryReady = isAgentDirectoryReady(managedAgentsQuery);
   const relayAgentDirectoryReady = isAgentDirectoryReady(relayAgentsQuery);
@@ -181,7 +225,7 @@ export function useMentions(
     () => getSharedChannelIds(channelsQuery.data),
     [channelsQuery.data],
   );
-  const mentionChannelId = isAgentMentionChannelType(options?.channelType)
+  const mentionChannelId = (isAgentMentionChannelType(options?.channelType) || IS_SPACES_ALPHA && options?.channelType === "dm")
     ? channelId
     : null;
   const mentionableAgentPubkeys = React.useMemo(
@@ -243,17 +287,18 @@ export function useMentions(
   );
   const agentIdentityPubkeys = React.useMemo(
     () =>
-      getAgentIdentityPubkeys({
+      new Set([...companyAgentPubkeys, ...getAgentIdentityPubkeys({
         managedAgentPubkeys,
         relayAgents: relayAgentsQuery.data ?? [],
         members: members ?? [],
         profileIsAgent: (pubkey) => profiles?.[pubkey]?.isAgent === true,
-      }),
-    [managedAgentPubkeys, members, profiles, relayAgentsQuery.data],
+      })]),
+    [companyAgentPubkeys, managedAgentPubkeys, members, profiles, relayAgentsQuery.data],
   );
   const mentionCandidates = React.useMemo<MentionCandidate[]>(
     () =>
       buildMentionCandidates({
+        knownCanonicalAgentPubkeys: companyAgentPubkeys,
         activeAgentPubkeys,
         activePersonaById,
         activePersonas,
@@ -278,6 +323,7 @@ export function useMentions(
       }),
     [
       activePersonaById,
+      companyAgentPubkeys,
       activeAgentPubkeys,
       activePersonas,
       userSearchResults,
@@ -304,7 +350,7 @@ export function useMentions(
     () => [
       ...mentionCandidates,
       ...buildTeamMentionCandidates(
-        teamsQuery.data ?? [],
+        IS_SPACES_ALPHA ? [] : teamsQuery.data ?? [],
         personasQuery.data ?? [],
         mentionCandidates,
       ),
@@ -764,6 +810,7 @@ export function useMentions(
     () => selectedAgentMentionPubkeysRef.current,
   ).current;
   const revalidateMentionPubkeys = useAgentMentionRevalidation({
+    canonicalOnly: IS_SPACES_ALPHA,
     agentPubkeys: agentIdentityPubkeys,
     getSelectedAgentPubkeys,
     currentPubkey,
@@ -774,6 +821,8 @@ export function useMentions(
         : { type: "managed-only" },
     sharedChannelIds,
     refetchManagedAgents: managedAgentsQuery.refetch,
+    companyAgentPubkeys,
+    fetchCompanyAgents: companyMentions.revalidate,
   });
   const extractMentionPersonas = React.useCallback(
     (text: string): PersonaMentionTarget[] =>

@@ -72,7 +72,24 @@ const STUB_URL_PREFIX = "buzz-test-stub:";
 const ASSET_SPECIFIER = /\.(?:png|jpe?g|gif|svg|webp|avif|ico)(?:\?[^/]*)?$/;
 const ASSET_URL_PREFIX = "buzz-test-asset:";
 
+const workReleaseContracts = new Map([["@axis/gateway-client/work-release", "work-release"], ["@axis/buzz/event-contract", "buzz-event-contract"], ["@axis/buzz/disclosure-contract", "buzz-disclosure-contract"], ["@axis/buzz/release-contract", "buzz-release-contract"], ["@axis/buzz/reviewed-publication-contract", "buzz-reviewed-publication-contract"]]);
 export function resolve(specifier, context, nextResolve) {
+  if (specifier === "@axis/gateway-client") return nextResolve(toFileSpecifier(path.join(repoRoot, ".spaces-axis-contracts/gateway-client.ts")), context);
+  const contract = workReleaseContracts.get(specifier);
+  if (contract) return nextResolve(toFileSpecifier(path.join(repoRoot, ".spaces-axis-contracts", `${contract}.ts`)), context);
+  // Canonical SDK sources retain their published .js import specifiers.
+  if (context.parentURL?.includes("/.spaces-axis-contracts/") && specifier.startsWith("./") && specifier.endsWith(".js")) {
+    return nextResolve(new URL(specifier.slice(0, -3) + ".ts", context.parentURL).href, context);
+  }
+
+  if (specifier === "@axis/gateway-client/work-task-status") {
+    return nextResolve(
+      toFileSpecifier(
+        path.join(repoRoot, ".spaces-axis-contracts/work-task-status.ts"),
+      ),
+      context,
+    );
+  }
   if (ASSET_SPECIFIER.test(specifier)) {
     return {
       shortCircuit: true,

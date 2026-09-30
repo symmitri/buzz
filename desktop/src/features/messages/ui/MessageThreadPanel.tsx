@@ -20,6 +20,8 @@ import type { VideoReviewPresentation } from "@/features/messages/lib/videoRevie
 import type { UserProfileLookup } from "@/features/profile/lib/identity";
 import type { Channel } from "@/shared/api/types";
 import type { ThreadPanelLayoutProps } from "@/features/channels/lib/threadPanelLayout";
+import { WorkConsentThread } from "./WorkConsentThread";
+import { WorkReleaseThread } from "./WorkReleaseThread";
 import { useEscapeKey } from "@/shared/hooks/useEscapeKey";
 import { useIsThreadPanelOverlay } from "@/shared/hooks/use-mobile";
 import { VideoReviewNavigationProvider } from "@/shared/ui/VideoReviewNavigation";
@@ -585,6 +587,7 @@ export function MessageThreadPanel({
                   threadHead.id,
                 )}
               />
+              <div data-work-consent-fallback="" />
             </div>
           </div>
         )}
@@ -753,6 +756,7 @@ export function MessageThreadPanel({
                             entry.message.id,
                           )}
                         />
+                        <div data-work-consent-anchor={entry.message.id} />
                         {entry.summary ? (
                           <MessageThreadSummaryRow
                             collapseDepthGuideActions={
@@ -789,6 +793,23 @@ export function MessageThreadPanel({
             }
           />
         </div>
+        {!isHuddleTranscript ? (
+          <>
+            <WorkConsentThread
+              key={`access:${channelId}:${threadHead.id}:${currentPubkey}`}
+              channelId={channelId}
+              rootEventId={threadHead.id}
+              currentPubkey={currentPubkey}
+              timeline={{ messages: [threadHead, ...threadReplyRenderItems.map(item => item.entry.message)], container: threadContentRef }}
+            />
+            <WorkReleaseThread
+              key={`review:${channelId}:${threadHead.id}:${currentPubkey}`}
+              channelId={channelId}
+              rootEventId={threadHead.id}
+              currentPubkey={currentPubkey}
+            />
+          </>
+        ) : null}
       </div>
     </AuxiliaryPanelBody>
   );

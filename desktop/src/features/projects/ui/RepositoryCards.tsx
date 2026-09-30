@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import * as React from "react";
 
 import { FolderGit2, Globe, SquareTerminal } from "lucide-react";
@@ -67,7 +69,7 @@ function RepositoryHostIcon({
   const host = projectRepoHostForRepository(repository, useRelayOrigin());
   const label =
     host.kind === "buzz"
-      ? "Buzz-hosted repository"
+      ? `${PRODUCT_NAME}-hosted repository`
       : host.kind === "external"
         ? `Git data hosted on ${host.host}`
         : "Repository host";

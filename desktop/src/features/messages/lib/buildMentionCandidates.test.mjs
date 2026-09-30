@@ -60,6 +60,24 @@ test("a roster entry and its relay agent record coalesce into one candidate", ()
   assert.equal(candidates[0].displayName, "Scout");
   assert.equal(candidates[0].isActiveAgent, true);
 });
+test("a known canonical Agent never becomes a human candidate after directory failure", async () => {
+  const { revalidateAgentMentionPubkeys } = await import("./agentMentionRevalidation.ts");
+  const known = new Set([AGENT_PUBKEY]);
+  const base = input({ knownCanonicalAgentPubkeys: known,
+    members: [{pubkey: AGENT_PUBKEY, displayName: "Adam", role: "member"}],
+    mentionableAgentPubkeys: known, relayAgents: [{pubkey: AGENT_PUBKEY, companyAgentId: "adam", name: "Adam", channelIds: ["group"]}],
+  });
+  assert.equal(buildMentionCandidates(base)[0].isAgent, true);
+  assert.deepEqual(buildMentionCandidates({...base, mentionableAgentPubkeys: new Set(), relayAgents: [], relayAgentDirectoryReady: false}), []);
+  let checks = 0;
+  await assert.rejects(revalidateAgentMentionPubkeys({
+    pubkeys: [AGENT_PUBKEY], agentPubkeys: new Set(), companyAgentPubkeys: known, canonicalOnly: true,
+    currentPubkey: MEMBER_PUBKEY, eligibilityScope: {type:"channel", channelId:"group"}, sharedChannelIds: new Set(),
+    refetchManagedAgents: async()=>({data:[],error:null}), fetchRelayAgents: async()=>[],
+    fetchCompanyAgents: async()=>{ checks++; throw new Error("unavailable"); },
+  }), /Could not authorize/);
+  assert.equal(checks, 1, "known Agent cannot take the human no-read shortcut");
+});
 
 test("archived identities never become candidates", () => {
   const candidates = buildMentionCandidates(

@@ -22,6 +22,7 @@ import {
 
 /** Directories and rosters the mention picker merges into one candidate list. */
 export type BuildMentionCandidatesInput = {
+  knownCanonicalAgentPubkeys?: ReadonlySet<string>;
   activeAgentPubkeys: ReadonlySet<string>;
   activePersonaById: ReadonlyMap<string, AgentPersona>;
   /** Already narrowed to `isActive` personas. */
@@ -54,6 +55,7 @@ export type BuildMentionCandidatesInput = {
  * into a single entry that keeps the richest field from each.
  */
 export function buildMentionCandidates({
+  knownCanonicalAgentPubkeys,
   activeAgentPubkeys,
   activePersonaById,
   activePersonas,
@@ -77,8 +79,10 @@ export function buildMentionCandidates({
   userSearchResults,
 }: BuildMentionCandidatesInput): MentionCandidate[] {
   const candidatesByPubkey = new Map<string, MentionCandidate>();
+  const canonicalAgentPubkeys = new Set((relayAgents ?? []).filter(agent => agent.companyAgentId).map(agent => normalizePubkey(agent.pubkey)));
   const addCandidate = (candidate: MentionCandidate & { pubkey: string }) => {
     const pubkey = normalizePubkey(candidate.pubkey);
+    if (knownCanonicalAgentPubkeys?.has(pubkey)) candidate = { ...candidate, isAgent: true };
     if (isArchived(pubkey)) {
       return;
     }
@@ -139,6 +143,7 @@ export function buildMentionCandidates({
       kind: "identity",
       pubkey,
       displayName:
+        (canonicalAgentPubkeys.has(pubkey) ? agentName : null) ||
         member.displayName?.trim() ||
         agentName ||
         profile?.displayName?.trim() ||

@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { motion, useReducedMotion } from "motion/react";
 import * as React from "react";
 
@@ -105,7 +107,7 @@ export function DownloadKeyStep({
               ? "Enter your password to make sure you can unlock this file."
               : hasCreated
                 ? "Test your backup to make sure it works, or continue without testing."
-                : "This creates a password-protected file with your private key. Remember, Buzz can’t recover your key if you lose it."}
+                : `This creates a password-protected file with your private key. Remember, ${PRODUCT_NAME} can’t recover your key if you lose it.`}
         </p>
       </motion.div>
 

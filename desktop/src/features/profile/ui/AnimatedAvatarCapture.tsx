@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { Camera } from "lucide-react";
 import * as React from "react";
 import { createPortal } from "react-dom";
@@ -380,7 +382,7 @@ export function AnimatedAvatarCapture({
       } catch {
         releaseCamera();
         setErrorMessage(
-          "Could not access the camera. Check Buzz's camera permission and try again.",
+          `Could not access the camera. Check ${PRODUCT_NAME}'s camera permission and try again.`,
         );
         setPhase("idle");
       }

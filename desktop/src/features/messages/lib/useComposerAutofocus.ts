@@ -1,4 +1,43 @@
 import * as React from "react";
+import type { Editor } from "@tiptap/core";
+import { Selection } from "@tiptap/pm/state";
+
+/** TipTap focus("end") selection semantics, with synchronous DOM focus. */
+export function focusComposerEndNow(editor: Editor) {
+  const selection = Selection.atEnd(editor.state.doc);
+  // Setting an identical selection clears stored formatting. Selection.atEnd
+  // also retains NodeSelection for a trailing atomic block such as a rule.
+  if (!editor.state.selection.eq(selection)) {
+    editor.view.dispatch(editor.state.tr.setSelection(selection));
+  }
+  editor.view.focus();
+  editor.commands.scrollIntoView();
+}
+
+/**
+ * Check focus ownership in the frame that changes DOM focus. TipTap's focus
+ * command queues another frame internally, after an effect's guard has run.
+ * The callback must focus synchronously so a newly focused native decision
+ * cannot lose its Enter key to the composer between those two operations.
+ */
+export function scheduleComposerFocus(focusNow: () => void) {
+  return requestAnimationFrame(() => {
+    if (document.activeElement?.closest("[data-preserve-composer-focus]"))
+      return;
+    focusNow();
+  });
+}
+
+export function focusComposerPreserve(editor: Editor | null) {
+  // TipTap focus() is an immediate no-op when already focused. Do not queue a
+  // later focus that could steal it back from an ordinary input the user chose.
+  if (!editor || editor.isDestroyed || editor.view.hasFocus()) return;
+  scheduleComposerFocus(() => {
+    if (editor.isDestroyed || editor.view.hasFocus()) return;
+    editor.view.focus();
+    editor.commands.scrollIntoView();
+  });
+}
 
 /**
  * Focus the composer editor on mount and whenever the active draft key
@@ -39,6 +78,9 @@ export function useComposerAutofocus(
     if (typeof document === "undefined") return;
     const active = document.activeElement as HTMLElement | null;
     if (active && active !== document.body) {
+      // Native work decisions own keyboard focus while the editor finishes
+      // mounting. Do not turn a decision's Enter key into a chat send.
+      if (active.closest("[data-preserve-composer-focus]")) return;
       const tag = active.tagName;
       if (
         tag === "INPUT" ||

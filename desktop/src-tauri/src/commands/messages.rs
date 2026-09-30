@@ -420,6 +420,7 @@ pub async fn send_channel_message(
     kind: Option<u32>,
     expected_relay_url: Option<String>,
     expected_signer_pubkey: Option<String>,
+    time_zone: Option<String>,
     state: State<'_, AppState>,
 ) -> Result<SendChannelMessageResponse, String> {
     let channel_uuid = uuid::Uuid::parse_str(&channel_id)
@@ -457,7 +458,7 @@ pub async fn send_channel_message(
 
     let mut resolved_root: Option<String> = None;
 
-    let builder = match kind_num {
+    let mut builder = match kind_num {
         buzz_core_pkg::kind::KIND_FORUM_POST => events::build_forum_post(
             channel_uuid,
             content.trim(),
@@ -517,6 +518,12 @@ pub async fn send_channel_message(
             )?
         }
     };
+
+    // Date context travels with the exact signed human message. It is never
+    // used as account authority; Gateway still reviews the proposed scope.
+    if let Some(zone) = time_zone.filter(|zone| !zone.is_empty() && zone.len() <= 128 && zone.bytes().all(|c| c.is_ascii_alphanumeric() || b"/_+-".contains(&c))) {
+        builder = builder.tag(nostr::Tag::parse(["axis-time-zone", zone.as_str()]).map_err(|_| "invalid device timezone tag")?);
+    }
 
     // `created_at` is the signed event's own second, not a post-publication
     // clock read — persisted as an event cursor by the Projects opener.

@@ -113,6 +113,8 @@ function SettingsSectionButton({
 export function SettingsView({
   currentPubkey,
   fallbackDisplayName,
+  profileTab,
+  onProfileTabChange,
   isUpdatingDesktopNotifications,
   notificationErrorMessage,
   notificationPermission,
@@ -348,6 +350,8 @@ export function SettingsView({
               {renderSettingsSection(section, {
                 currentPubkey,
                 fallbackDisplayName,
+                profileTab,
+                onProfileTabChange,
                 isUpdatingDesktopNotifications,
                 notificationErrorMessage,
                 notificationPermission,

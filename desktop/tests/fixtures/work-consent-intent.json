@@ -1,0 +1,127 @@
+{
+  "intent": {
+    "id": "intent_fixture",
+    "version": 1,
+    "digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "createdAt": "2026-09-17T13:59:00Z",
+    "state": "select_account",
+    "terms": {
+      "orgId": "org_fixture",
+      "applicationId": "app_fixture",
+      "workloadIdentityId": "runtime_fixture",
+      "task": {
+        "workId": "work_fixture",
+        "requestId": "admission_fixture",
+        "requesterId": "usr_initiator",
+        "agentId": "agent_symi",
+        "conversationId": "conversation_fixture",
+        "sessionId": "session_fixture",
+        "bindingVersion": 1,
+        "audienceVersion": 1,
+        "audienceDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "authorizationEpoch": 1
+      },
+      "taskSummary": "Read the two latest meetings this morning and prepare private roadmap proposals.",
+      "scope": {
+        "mechanicsVersion": 1,
+        "allowRecordingTimeProbes": true,
+        "maxProbePagesPerNote": 8,
+        "maxProviderCalls": 128,
+        "maxTranscriptPagesPerNote": 32,
+        "maxBytes": 16777216,
+        "timeZone": "America/New_York",
+        "meetingStart": "2026-09-17T04:00:00Z",
+        "meetingEnd": "2026-09-17T16:00:00Z",
+        "noteIds": [],
+        "selection": "latest_meetings",
+        "maxNotes": 2,
+        "maxListPages": 5,
+        "pageSize": 30,
+        "allowedTools": [
+          "list_notes",
+          "get_note"
+        ],
+        "includeTranscript": true
+      },
+      "audience": {
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "version": 1
+      },
+      "expiresAt": "2026-09-17T18:00:00Z"
+    }
+  },
+  "accounts": [
+    {
+      "accountId": "account_replacement",
+      "accountVersion": 2,
+      "connectionId": "connection_fixture",
+      "provider": "granola",
+      "label": "Owner's Granola",
+      "email": "owner@example.test"
+    }
+  ],
+  "consent": {
+    "id": "consent_fixture",
+    "terms": {
+      "orgId": "org_fixture",
+      "grantorId": "usr_owner",
+      "applicationId": "app_fixture",
+      "workloadIdentityId": "runtime_fixture",
+      "task": {
+        "workId": "work_fixture",
+        "requestId": "admission_fixture",
+        "requesterId": "usr_initiator",
+        "agentId": "agent_symi",
+        "conversationId": "conversation_fixture",
+        "sessionId": "session_fixture",
+        "bindingVersion": 1,
+        "audienceVersion": 1,
+        "audienceDigest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "authorizationEpoch": 1
+      },
+      "accountId": "account_fixture",
+      "accountVersion": 1,
+      "connectionId": "connection_fixture",
+      "provider": "granola",
+      "taskSummary": "Read the two latest meetings this morning and prepare private roadmap proposals.",
+      "scope": {
+        "mechanicsVersion": 1,
+        "allowRecordingTimeProbes": true,
+        "maxProbePagesPerNote": 8,
+        "maxProviderCalls": 128,
+        "maxTranscriptPagesPerNote": 32,
+        "maxBytes": 16777216,
+        "timeZone": "America/New_York",
+        "meetingStart": "2026-09-17T04:00:00Z",
+        "meetingEnd": "2026-09-17T16:00:00Z",
+        "noteIds": [],
+        "selection": "latest_meetings",
+        "maxNotes": 2,
+        "maxListPages": 5,
+        "pageSize": 30,
+        "allowedTools": [
+          "list_notes",
+          "get_note"
+        ],
+        "includeTranscript": true
+      },
+      "audience": {
+        "digest": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "revision": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "version": 1
+      },
+      "sharing": "owner_review_required",
+      "outputAudience": {
+        "kind": "private_contribution",
+        "ownerId": "usr_owner"
+      },
+      "expiresAt": "2026-09-17T18:00:00Z"
+    },
+    "termsDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "version": 3,
+    "state": "revoked",
+    "createdAt": "2026-09-17T14:00:00Z",
+    "executionEnabled": false
+  }
+}
