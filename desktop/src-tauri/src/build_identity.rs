@@ -10,6 +10,13 @@ pub(crate) fn demo_slug() -> Option<&'static str> {
     option_env!("BUZZ_DESKTOP_BUILD_DEMO_SLUG")
 }
 
+pub(crate) fn require_spaces_alpha() -> Result<(), String> {
+    if demo_slug() != Some("spaces-alpha") {
+        return Err("Company sign-in is available only in Spaces Alpha.".into());
+    }
+    Ok(())
+}
+
 pub(crate) fn is_demo_build() -> bool {
     demo_slug().is_some()
 }

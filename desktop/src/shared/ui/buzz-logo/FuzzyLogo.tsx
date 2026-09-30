@@ -1,3 +1,4 @@
+import { IS_SPACES_ALPHA } from "@/shared/lib/product-brand";
 import { cn } from "@/shared/lib/cn";
 import BuzzLogoAnimation, {
   type BuzzLogoAnimationProps,
@@ -25,7 +26,7 @@ export type FuzzyLogoProps = {
 export function FuzzyLogo({
   fuzz = true,
   className,
-  ariaLabel = "Buzz logo",
+  ariaLabel = IS_SPACES_ALPHA ? "Symmitri logo" : "Buzz logo",
   loop = false,
   loopRestSeconds = 0,
   pulse = true,

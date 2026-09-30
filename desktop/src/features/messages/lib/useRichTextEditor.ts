@@ -50,6 +50,11 @@ import { SpoilerMark } from "./spoilerMark";
 import { createComposerLinkPasteHandler } from "./composerMessageLinkNode";
 import type { ComposerMessageLinkChannel } from "./useComposerMessageLinks";
 import { useComposerMessageLinks } from "./useComposerMessageLinks";
+import {
+  focusComposerEndNow,
+  focusComposerPreserve,
+  scheduleComposerFocus,
+} from "./useComposerAutofocus";
 
 /**
  * Plain-text edit descriptor returned by autocomplete hooks
@@ -159,6 +164,7 @@ export function useRichTextEditor({
   onLinkSelectionChange,
   onLinkShortcut,
 }: RichTextEditorOptions) {
+  const pendingContentRef = React.useRef<string | null>(null);
   const addressedAgentMentionNamesRef = React.useRef<readonly string[]>([]);
   const onUpdateRef = React.useRef(onUpdate);
   onUpdateRef.current = onUpdate;
@@ -573,7 +579,7 @@ export function useRichTextEditor({
       // the existing selection rather than jumping to the end).
       if (hadFocusBeforeDisableRef.current) {
         hadFocusBeforeDisableRef.current = false;
-        editor.commands.focus();
+        focusComposerPreserve(editor);
       }
     }
   }, [editor, editable]);
@@ -631,6 +637,7 @@ export function useRichTextEditor({
   }, [editor, messageLinkWiring.syncChannelNames]);
 
   const getMarkdown = React.useCallback((): string => {
+    if (pendingContentRef.current !== null) return pendingContentRef.current;
     if (!editor) return "";
     return getMarkdownFromEditor(editor);
   }, [editor]);
@@ -641,16 +648,34 @@ export function useRichTextEditor({
   }, [editor]);
 
   const clearContent = React.useCallback(() => {
-    editor?.commands.clearContent(true);
+    if (!editor || editor.isDestroyed) {
+      pendingContentRef.current = "";
+      return;
+    }
+    pendingContentRef.current = null;
+    editor.commands.clearContent(true);
   }, [editor]);
 
   const setContent = React.useCallback(
     (markdown: string) => {
-      if (!editor) return;
+      if (!editor || editor.isDestroyed) {
+        pendingContentRef.current = markdown;
+        return;
+      }
+      pendingContentRef.current = null;
       editor.commands.setContent(markdown);
     },
     [editor],
   );
+  React.useLayoutEffect(() => {
+    // A cold suspended view can replace its initial editor before the draft
+    // restores. Keep that exact restore until a live editor can receive it.
+    if (!editor || editor.isDestroyed || pendingContentRef.current === null)
+      return;
+    const markdown = pendingContentRef.current;
+    pendingContentRef.current = null;
+    editor.commands.setContent(markdown);
+  }, [editor]);
 
   /**
    * Replace the editor document with literal plain text and focus its end.
@@ -677,7 +702,11 @@ export function useRichTextEditor({
   );
 
   const focusEnd = React.useCallback(() => {
-    editor?.commands.focus("end");
+    if (!editor) return;
+    scheduleComposerFocus(() => {
+      if (editor.isDestroyed) return;
+      focusComposerEndNow(editor);
+    });
   }, [editor]);
 
   /**
@@ -687,9 +716,7 @@ export function useRichTextEditor({
    * effect) where we don't want to yank the cursor to the end.
    */
   const focusPreserve = React.useCallback(() => {
-    if (!editor) return;
-    // `focus()` with no position argument preserves the current selection.
-    editor.commands.focus();
+    focusComposerPreserve(editor);
   }, [editor]);
 
   // Backwards-compatible alias — existing call sites that want "end"

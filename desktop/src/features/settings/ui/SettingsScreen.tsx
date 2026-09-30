@@ -1,12 +1,17 @@
 import type { DesktopNotificationPermissionState } from "@/features/notifications/hooks";
 import type { NotificationSettings } from "@/features/notifications/hooks";
 import type { SoundName, SoundSlot } from "@/features/notifications/lib/sound";
-import type { SettingsSection } from "@/features/settings/ui/SettingsPanels";
+import type {
+  SettingsProfileTab,
+  SettingsSection,
+} from "@/features/settings/ui/SettingsPanels";
 import { SettingsView } from "@/features/settings/ui/SettingsView";
 
 type SettingsScreenProps = {
   currentPubkey?: string;
   fallbackDisplayName?: string;
+  profileTab: SettingsProfileTab;
+  onProfileTabChange: (tab: SettingsProfileTab) => void;
   isUpdatingDesktopNotifications: boolean;
   notificationErrorMessage: string | null;
   notificationPermission: DesktopNotificationPermissionState;
@@ -25,6 +30,8 @@ type SettingsScreenProps = {
 export function SettingsScreen({
   currentPubkey,
   fallbackDisplayName,
+  profileTab,
+  onProfileTabChange,
   isUpdatingDesktopNotifications,
   notificationErrorMessage,
   notificationPermission,
@@ -43,6 +50,8 @@ export function SettingsScreen({
     <SettingsView
       currentPubkey={currentPubkey}
       fallbackDisplayName={fallbackDisplayName}
+      profileTab={profileTab}
+      onProfileTabChange={onProfileTabChange}
       isUpdatingDesktopNotifications={isUpdatingDesktopNotifications}
       notificationErrorMessage={notificationErrorMessage}
       notificationPermission={notificationPermission}

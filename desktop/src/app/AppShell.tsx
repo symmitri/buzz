@@ -73,7 +73,9 @@ import { SendFeedbackController } from "@/features/settings/ui/SendFeedbackContr
 import {
   DEFAULT_SETTINGS_SECTION,
   type SettingsSection,
+  type SettingsProfileTab,
   isSettingsSection,
+  isSettingsProfileTab,
 } from "@/features/settings/ui/SettingsPanels";
 import { useDueReminderBadgeCount } from "@/features/reminders/hooks";
 import { useReminderNotifications } from "@/features/reminders/useReminderNotifications";
@@ -180,6 +182,13 @@ export function AppShell() {
   )
     ? locationSearchSection
     : DEFAULT_SETTINGS_SECTION;
+  const locationSearchProfileTab = (location.search as { profileTab?: unknown })
+    .profileTab;
+  const settingsProfileTab: SettingsProfileTab = isSettingsProfileTab(
+    locationSearchProfileTab,
+  )
+    ? locationSearchProfileTab
+    : "overview";
   const startupReady = useDeferredStartup();
   const identityQuery = useIdentityQuery();
   const { mutedChannelIds, muteChannel, unmuteChannel } = useChannelMutes(
@@ -654,6 +663,19 @@ export function AppShell() {
     },
     [goSettings],
   );
+  const handleOpenProfileSettings = React.useCallback(() => {
+    if (settingsOpen) {
+      handleSettingsSectionChange("profile");
+    } else {
+      handleOpenSettings("profile");
+    }
+  }, [handleOpenSettings, handleSettingsSectionChange, settingsOpen]);
+  const handleSettingsProfileTabChange = React.useCallback(
+    (profileTab: SettingsProfileTab) => {
+      void goSettings("profile", { replace: true, profileTab });
+    },
+    [goSettings],
+  );
 
   const handleOpenSearchResult = React.useCallback(
     (hit: SearchHit, query: string) => {
@@ -687,6 +709,7 @@ export function AppShell() {
   });
   useSettingsShortcuts({
     onClose: handleCloseSettings,
+    onOpenProfile: handleOpenProfileSettings,
     onOpenSettings: handleOpenSettings,
     open: isHuddleRoom ? undefined : settingsOpen,
   });
@@ -789,6 +812,8 @@ export function AppShell() {
                         <LazySettingsScreen
                           currentPubkey={identityQuery.data?.pubkey}
                           fallbackDisplayName={identityQuery.data?.displayName}
+                          profileTab={settingsProfileTab}
+                          onProfileTabChange={handleSettingsProfileTabChange}
                           isUpdatingDesktopNotifications={
                             notificationSettings.isUpdatingDesktopEnabled
                           }

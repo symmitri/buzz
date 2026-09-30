@@ -67,6 +67,7 @@ import {
   type MentionCandidate,
 } from "./mentionCandidates";
 import { buildMentionCandidates } from "./buildMentionCandidates";
+import { useCompanyChannelMentions } from "./useCompanyChannelMentions";
 const MENTION_DEBOUNCE_MS = 120,
   MENTION_SUGGESTION_LIMIT = 50;
 type UseMentionsOptions = {
@@ -105,7 +106,38 @@ export function useMentions(
   const members = externalMembers ?? membersQuery.data;
   const isArchivedDiscovery = useIsArchivedPredicate();
   const managedAgentsQuery = useManagedAgentsQuery();
-  const relayAgentsQuery = useRelayAgentsQuery();
+  const legacyRelayAgentsQuery = useRelayAgentsQuery();
+  const companyMentions = useCompanyChannelMentions(
+    channelId,
+    options?.channelType,
+    currentPubkey,
+  );
+  const companyAgentPubkeys = companyMentions.knownCompanyPubkeys;
+  const relayAgentsQuery = React.useMemo(() => {
+    const legacyReady = isAgentDirectoryReady({
+      data: legacyRelayAgentsQuery.data,
+      error: legacyRelayAgentsQuery.error,
+    });
+    const companyReady = companyMentions.data !== undefined;
+    return {
+      data:
+        legacyReady || companyReady
+          ? [
+              ...(companyMentions.data ?? []),
+              ...(legacyReady
+                ? (legacyRelayAgentsQuery.data ?? [])
+                : []
+              ).filter((agent) => !companyAgentPubkeys.has(agent.pubkey)),
+            ]
+          : undefined,
+      error: legacyReady || companyReady ? null : legacyRelayAgentsQuery.error,
+    };
+  }, [
+    legacyRelayAgentsQuery.data,
+    legacyRelayAgentsQuery.error,
+    companyMentions.data,
+    companyAgentPubkeys,
+  ]);
   const channelsQuery = useChannelsQuery();
   const personasQuery = usePersonasQuery();
   const teamsQuery = useTeamsQuery();
@@ -774,6 +806,8 @@ export function useMentions(
         : { type: "managed-only" },
     sharedChannelIds,
     refetchManagedAgents: managedAgentsQuery.refetch,
+    companyAgentPubkeys,
+    fetchCompanyAgents: companyMentions.revalidate,
   });
   const extractMentionPersonas = React.useCallback(
     (text: string): PersonaMentionTarget[] =>

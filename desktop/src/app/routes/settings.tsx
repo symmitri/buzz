@@ -2,11 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import {
   type SettingsSection,
+  type SettingsProfileTab,
   isSettingsSection,
+  isSettingsProfileTab,
 } from "@/features/settings/ui/SettingsPanels";
 
 type SettingsRouteSearch = {
   section?: SettingsSection;
+  profileTab?: SettingsProfileTab;
 };
 
 function validateSettingsSearch(
@@ -18,6 +21,10 @@ function validateSettingsSearch(
 
   return {
     section: isSettingsSection(search.section) ? search.section : undefined,
+    profileTab:
+      search.section === "profile" && isSettingsProfileTab(search.profileTab)
+        ? search.profileTab
+        : undefined,
   };
 }
 

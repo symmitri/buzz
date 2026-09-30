@@ -83,6 +83,12 @@ pub(super) async fn start_local_agent_pairs_with_preflight(
     pubkey: &str,
     relay_urls: &[String],
 ) -> Result<ManagedAgentSummary, String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return Err(
+            "Alpha agents run through Gateway. Open a conversation with a connected company agent."
+                .into(),
+        );
+    }
     let record_snapshot = {
         let _store_guard = state
             .managed_agents_store_lock
@@ -169,6 +175,12 @@ pub(super) async fn start_local_agent_with_preflight(
     expected_signer_pubkey: Option<&str>,
     replay_floor_unix: Option<u64>,
 ) -> Result<ManagedAgentSummary, String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return Err(
+            "Alpha agents run through Gateway. Open a conversation with a connected company agent."
+                .into(),
+        );
+    }
     let record_snapshot = {
         let _store_guard = state
             .managed_agents_store_lock
