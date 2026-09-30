@@ -14,6 +14,7 @@ import {
   traverseHistory,
 } from "@/app/navigation/navigationGuard";
 import type { SearchHit } from "@/shared/api/types";
+import type { SettingsProfileTab } from "@/features/settings/ui/SettingsPanels";
 
 type NavigationBehavior = {
   force?: boolean;
@@ -389,11 +390,21 @@ export function useAppNavigation() {
   );
 
   const goSettings = React.useCallback(
-    (section?: string, behavior?: NavigationBehavior) =>
+    (
+      section?: string,
+      behavior?: NavigationBehavior & { profileTab?: SettingsProfileTab },
+    ) =>
       commitNavigation(
         {
           to: "/settings",
-          search: section ? { section } : {},
+          search: section
+            ? {
+                section,
+                ...(section === "profile" && behavior?.profileTab
+                  ? { profileTab: behavior.profileTab }
+                  : {}),
+              }
+            : {},
         },
         behavior,
       ),

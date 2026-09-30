@@ -1,6 +1,8 @@
 import { useId, useLayoutEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import "./buzz-logo-animation.css";
+// Symmitri modification: keep the component API while skinning Alpha.
+import { SpacesLogo } from "../SpacesBrand";
 
 const LOOP = "indefinite";
 const EASE = ".16 1 .3 1";
@@ -621,7 +623,7 @@ function RestWindowFade({
   );
 }
 
-export default function BuzzLogoAnimation({
+function BuzzLogoAnimation({
   ariaLabel = "Buzz logo animation",
   className = "",
   fullScreen = true,
@@ -720,3 +722,7 @@ export default function BuzzLogoAnimation({
     </div>
   );
 }
+
+const BuildLogo: typeof BuzzLogoAnimation =
+  import.meta.env?.VITE_SPACES_ALPHA === "1" ? SpacesLogo : BuzzLogoAnimation;
+export default BuildLogo;

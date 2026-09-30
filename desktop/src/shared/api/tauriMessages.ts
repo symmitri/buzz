@@ -1,6 +1,7 @@
 import { invokeTauri } from "@/shared/api/tauri";
 import type { RawSendChannelMessageResult } from "@/shared/api/tauriMessageTypes";
 import type { SendChannelMessageResult } from "@/shared/api/types";
+import { spacesTimeZone } from "@/shared/lib/spaces-time-zone";
 
 export async function sendChannelMessage(
   channelId: string,
@@ -17,6 +18,7 @@ export async function sendChannelMessage(
   expectedSignerPubkey?: string,
   rootEventId?: string | null,
 ): Promise<SendChannelMessageResult> {
+  const timeZone = spacesTimeZone();
   const response = await invokeTauri<RawSendChannelMessageResult>(
     "send_channel_message",
     {
@@ -31,6 +33,7 @@ export async function sendChannelMessage(
       sentFromThreadTag: sentFromThreadTag ?? null,
       mentionPubkeys: mentionPubkeys ?? null,
       kind: kind ?? null,
+      timeZone: timeZone ?? null,
       // Tenant scope captured by the caller before its first await; the
       // backend fails closed when the active community no longer matches.
       expectedRelayUrl: expectedRelayUrl ?? null,

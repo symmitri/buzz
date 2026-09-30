@@ -1,3 +1,5 @@
+import { IS_SPACES_ALPHA } from "@/shared/lib/product-brand";
+import { SpacesMark } from "@/shared/ui/SpacesBrand";
 import {
   DndContext,
   DragOverlay,
@@ -155,7 +157,8 @@ function CommunityButton({
                     src={iconUrl}
                   />
                 ) : (
-                  getInitials(community.name) || "🐝"
+                  getInitials(community.name) ||
+                  (IS_SPACES_ALPHA ? <SpacesMark className="h-5 w-5" /> : "🐝")
                 )}
               </span>
               {showBadge ? (
@@ -207,7 +210,8 @@ function CommunityDragOverlay({
           src={iconUrl}
         />
       ) : (
-        getInitials(community.name) || "🐝"
+        getInitials(community.name) ||
+        (IS_SPACES_ALPHA ? <SpacesMark className="h-5 w-5" /> : "🐝")
       )}
     </div>
   );

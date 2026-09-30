@@ -1,3 +1,4 @@
+// Symmitri modification: opt-in branded themes through the existing appearance contract.
 import { useEffect, useState } from "react";
 import { createThemeVars } from "./adaptive-theme";
 import {
@@ -25,11 +26,17 @@ let themePreviewVarsPromise: Promise<ThemePreviewVarsByTheme> | null = null;
 async function loadThemePreviewVars(name: SyntaxThemeName) {
   const themeData = await loadThemeData(name);
   const info = extractThemeInfo(name, themeData);
-  const { vars } = createThemeVars(info.bg, info.fg, info.comment, {
-    added: info.added,
-    deleted: info.deleted,
-    modified: info.modified,
-  });
+  const { vars } = createThemeVars(
+    info.bg,
+    info.fg,
+    info.comment,
+    {
+      added: info.added,
+      deleted: info.deleted,
+      modified: info.modified,
+    },
+    name,
+  );
   return [name, vars] as const;
 }
 

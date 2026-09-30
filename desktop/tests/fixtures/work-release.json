@@ -1,0 +1,170 @@
+{
+  "description": "Synthetic owner review fixture; owner and original requester are deliberately different.",
+  "expected": {
+    "identityId": "human_owner",
+    "orgId": "org_synthetic",
+    "workId": "work_synthetic",
+    "releaseId": "release_synthetic",
+    "origin": {
+      "orgId": "org_synthetic",
+      "tenantId": "synthetic_alpha",
+      "relayUrl": "https://reviewed.synthetic.example",
+      "relayPubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "channelId": "22222222-2222-4222-8222-222222222222",
+      "rootEventId": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782"
+    }
+  },
+  "preview": {
+    "release": {
+      "id": "release_synthetic",
+      "terms": {
+        "schemaVersion": 1,
+        "orgId": "org_synthetic",
+        "ownerId": "human_owner",
+        "initiatorId": "human_requester",
+        "applicationId": "app_synthetic",
+        "workloadIdentityId": "runtime_synthetic",
+        "accountId": "account_synthetic",
+        "accountVersion": 1,
+        "connectionId": "connection_synthetic",
+        "candidate": {
+          "candidateId": "candidate_c01c984d5725a902651e7411a0be9a456432d6c0a528e4a34d7166494584d9b2",
+          "contentDigest": "7d17522dc7be29d60cd83fc0782ed484e686f759c7fe576bacacce8913f4ed5e",
+          "version": 1,
+          "execution": {
+            "id": "contribution_a6f82d36a0e9b9c95578b258d93bcd1eb45171dda97446de41a4e03cc56304c7",
+            "consentId": "consent_synthetic",
+            "consentVersion": 2,
+            "termsDigest": "5555555555555555555555555555555555555555555555555555555555555555"
+          },
+          "task": {
+            "workId": "work_synthetic",
+            "requestId": "buzz_4b652eda3e90c76bd787d80c9b37be53decde1d98f82082015ac8491921b4793",
+            "requesterId": "human_requester",
+            "agentId": "agent-symi-synthetic",
+            "conversationId": "conversation_synthetic",
+            "sessionId": "session_synthetic",
+            "bindingVersion": 1,
+            "audienceVersion": 1,
+            "audienceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "authorizationEpoch": 1
+          },
+          "mediaType": "text/markdown",
+          "byteLength": 37,
+          "createdAt": "2027-01-15T08:00:01.000Z"
+        },
+        "originalSource": {
+          "eventId": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+          "pubkey": "f9308a019258c31049344f85f89d5229b531c845836f99b08601f113bce036f9"
+        },
+        "destination": {
+          "orgId": "org_synthetic",
+          "tenantId": "synthetic_alpha",
+          "relayUrl": "https://reviewed.synthetic.example",
+          "relayPubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "channelId": "22222222-2222-4222-8222-222222222222",
+          "rootEventId": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782"
+        },
+        "disclosure": {
+          "predicate": "buzz-native-public-realm-v1",
+          "readers": "admitted-realm-members",
+          "tenantId": "synthetic_alpha",
+          "relayOrigin": "https://reviewed.synthetic.example",
+          "relayPubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "channelId": "22222222-2222-4222-8222-222222222222",
+          "channelType": "stream",
+          "sourceEventId": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+          "threadRootId": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+          "channelMetadataEventId": "3333333333333333333333333333333333333333333333333333333333333333",
+          "realmMembershipEventId": "4444444444444444444444444444444444444444444444444444444444444444",
+          "deploymentEvidenceDigest": "6666666666666666666666666666666666666666666666666666666666666666",
+          "observedAt": 1800000002,
+          "expiresAt": 1800000032,
+          "disclosureDigest": "7777777777777777777777777777777777777777777777777777777777777777",
+          "publicationSupported": false,
+          "releaseBlocker": "relay-compare-consume-unavailable"
+        },
+        "publicationMaterial": {
+          "version": 1,
+          "community_id": "11111111-1111-4111-8111-111111111111",
+          "channel_id": "22222222-2222-4222-8222-222222222222",
+          "root_event_id": "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+          "publisher_pubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+          "relay_pubkey": "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+          "origin": "https://reviewed.synthetic.example",
+          "source_revision": "a9dd4d3bd771b47f0efb4e7f6f7329a5921372b5",
+          "source_build": "axis-1111111111111111111111111111111111111111-2222222222222222222222222222222222222222222222222222222222222222",
+          "realm_revision": "17",
+          "channel_revision": "9",
+          "policy_incarnation": "4",
+          "reader_policy": {
+            "http_auth": true,
+            "websocket_auth": true,
+            "realm_membership": true,
+            "owner_delegation": false,
+            "mesh": false
+          }
+        },
+        "publicationMaterialDigest": "8f56752d10ffaf80b73c86faa473d74b7d01fec1609cbb4603abecb5ab29a656",
+        "agentPubkey": "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+        "payloadTags": [
+          [
+            "h",
+            "22222222-2222-4222-8222-222222222222"
+          ],
+          [
+            "e",
+            "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+            "",
+            "root"
+          ],
+          [
+            "e",
+            "a5091c5c1f177277eb87393f8fafd33e4b13eb57cc38516dc03431755fdbb782",
+            "",
+            "reply"
+          ],
+          [
+            "axis-reviewed",
+            "1"
+          ]
+        ],
+        "payloadDigest": "cf92f873ee1dc329283bcdb4f084911f7fa115555f02453e98f953055f5ef4d3",
+        "publicationOperationId": "publication_synthetic",
+        "expiresAt": "2027-01-15T08:10:02Z"
+      },
+      "termsDigest": "3cad6c5973420f4d177508941295a79e45d9d1f4c238806af86f2593a0715cd4",
+      "version": 1,
+      "state": "pending",
+      "createdAt": "2027-01-15T08:00:02.000Z",
+      "publicationEnabled": false
+    },
+    "candidate": {
+      "candidateId": "candidate_c01c984d5725a902651e7411a0be9a456432d6c0a528e4a34d7166494584d9b2",
+      "contentDigest": "7d17522dc7be29d60cd83fc0782ed484e686f759c7fe576bacacce8913f4ed5e",
+      "version": 1,
+      "execution": {
+        "id": "contribution_a6f82d36a0e9b9c95578b258d93bcd1eb45171dda97446de41a4e03cc56304c7",
+        "consentId": "consent_synthetic",
+        "consentVersion": 2,
+        "termsDigest": "5555555555555555555555555555555555555555555555555555555555555555"
+      },
+      "task": {
+        "workId": "work_synthetic",
+        "requestId": "buzz_4b652eda3e90c76bd787d80c9b37be53decde1d98f82082015ac8491921b4793",
+        "requesterId": "human_requester",
+        "agentId": "agent-symi-synthetic",
+        "conversationId": "conversation_synthetic",
+        "sessionId": "session_synthetic",
+        "bindingVersion": 1,
+        "audienceVersion": 1,
+        "audienceDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "authorizationEpoch": 1
+      },
+      "mediaType": "text/markdown",
+      "byteLength": 37,
+      "createdAt": "2027-01-15T08:00:01.000Z"
+    },
+    "markdown": "Synthetic owner-reviewed contribution"
+  }
+}

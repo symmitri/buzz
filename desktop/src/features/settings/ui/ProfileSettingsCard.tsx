@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import { Check, ChevronDown, Copy, Pencil } from "lucide-react";
 import {
   AnimatePresence,
@@ -19,6 +21,7 @@ import {
   parseEmojiAvatarDataUrl,
 } from "@/features/profile/ui/ProfileAvatarEditor";
 import { cn } from "@/shared/lib/cn";
+import { useDocumentVisible } from "@/shared/lib/useDocumentVisible";
 import { Input } from "@/shared/ui/input";
 import { Spinner } from "@/shared/ui/spinner";
 import { Textarea } from "@/shared/ui/textarea";
@@ -33,8 +36,10 @@ import { writeTextToClipboard } from "@/shared/lib/clipboard";
 import { canonicalNpub, UNAVAILABLE_KEY_LABEL } from "@/shared/lib/pubkey";
 
 type ProfileSettingsCardProps = {
+  active?: boolean;
   currentPubkey?: string;
   fallbackDisplayName?: string;
+  showHeader?: boolean;
 };
 
 const AVATAR_EDITOR_TRANSITION_MS = 240;
@@ -133,10 +138,16 @@ function EditProfileMetadataButton({
 }
 
 export function ProfileSettingsCard({
+  active = true,
   currentPubkey,
   fallbackDisplayName,
+  showHeader = true,
 }: ProfileSettingsCardProps) {
   const shouldReduceMotion = useReducedMotion();
+  const documentVisible = useDocumentVisible();
+  const avatarSurfaceVisible = active && documentVisible;
+  const avatarSurfaceVisibleRef = React.useRef(avatarSurfaceVisible);
+  avatarSurfaceVisibleRef.current = avatarSurfaceVisible;
   const profileQuery = useProfileQuery();
   const updateProfileMutation = useUpdateProfileMutation();
   const profile = profileQuery.data;
@@ -178,6 +189,24 @@ export function ProfileSettingsCard({
   const avatarEditorFinishTimeoutRef = React.useRef<number | null>(null);
   const savedScrollTopRef = React.useRef<number | null>(null);
   isEditingProfileMetadataRef.current = isEditingProfileMetadata;
+
+  React.useEffect(() => {
+    if (avatarSurfaceVisible) return;
+    // Overview stays mounted for text drafts; the media editor must not.
+    if (avatarEditorOpenFrameRef.current !== null) {
+      window.cancelAnimationFrame(avatarEditorOpenFrameRef.current);
+      avatarEditorOpenFrameRef.current = null;
+    }
+    if (avatarEditorFinishTimeoutRef.current !== null) {
+      window.clearTimeout(avatarEditorFinishTimeoutRef.current);
+      avatarEditorFinishTimeoutRef.current = null;
+    }
+    setIsAvatarEditorOpen(false);
+    setShouldRenderAvatarEditor(false);
+    setIsAvatarEditorFinishing(false);
+    setIsAnimatedPreviewActive(false);
+    setAnimatedPreviewCaption(null);
+  }, [avatarSurfaceVisible]);
 
   React.useEffect(() => {
     if (!isEditingProfileMetadataRef.current) {
@@ -374,6 +403,7 @@ export function ProfileSettingsCard({
     shouldReduceMotion,
   ]);
   const reopenAvatarEditorAfterClose = React.useCallback(() => {
+    if (!avatarSurfaceVisibleRef.current) return;
     clearAvatarEditorFinishTimeout();
     setShouldRenderAvatarEditor(true);
     setIsAvatarEditorFinishing(false);
@@ -488,10 +518,12 @@ export function ProfileSettingsCard({
       ref={sectionRef}
     >
       <div>
-        <SettingsSectionHeader
-          title="Profile"
-          description="Update how your name, avatar, and bio appear across Buzz."
-        />
+        {showHeader ? (
+          <SettingsSectionHeader
+            title="Profile"
+            description={`Update how your name, avatar, and bio appear across ${PRODUCT_NAME}.`}
+          />
+        ) : null}
 
         <div className="space-y-3">
           {profileQuery.error instanceof Error ? (
@@ -808,7 +840,7 @@ export function ProfileSettingsCard({
                       </SettingsOptionGroupList>
                     </div>
 
-                    {shouldRenderAvatarEditor ? (
+                    {avatarSurfaceVisible && shouldRenderAvatarEditor ? (
                       <div
                         className={cn(
                           "relative origin-top transition-[opacity,scale] duration-200 ease-out will-change-[opacity,transform]",

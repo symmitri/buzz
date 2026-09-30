@@ -1,4 +1,5 @@
 import * as React from "react";
+import { SpacesAgentConnections } from "@/features/agents/ui/SpacesAgentConnections";
 import { ChevronDown, ChevronUp, Pencil } from "lucide-react";
 
 import { OtherSetupAgentMarker } from "@/features/agents/ui/OtherSetupAgentMarker";
@@ -510,27 +511,34 @@ export function ProfileSummaryView({
             tabs={tabIds}
           >
             {activeTab === "info" ? (
-              <ProfileInfoTabContent
-                activeTurns={activeTurns}
-                activityAgent={activityAgent}
-                agentInfoFields={agentInfoFields}
-                archiveActions={archiveActions}
-                canArchiveAgent={isBot && archiveActions.canArchive}
-                canDeleteAgent={canDeleteAgent}
-                channelIdToName={channelIdToName}
-                isArchived={isArchived}
-                isDeleteAgentPending={isAgentActionPending}
-                managedAgent={managedAgent}
-                onEditAgent={handleEditAgent}
-                onCreateCard={onCreateCard}
-                onDeleteAgent={onDeleteAgent}
-                onDuplicateAgent={onDuplicateAgent}
-                onExportAgent={onExportAgent}
-                onOpenActivity={onOpenActivity}
-                pubkey={pubkey}
-                showActivityIngress={showActivityIngress}
-                showInstructionBlock={showInstructionBlock}
-              />
+              <div className="space-y-4">
+                <ProfileInfoTabContent
+                  activeTurns={activeTurns}
+                  activityAgent={activityAgent}
+                  agentInfoFields={agentInfoFields}
+                  archiveActions={archiveActions}
+                  canArchiveAgent={isBot && archiveActions.canArchive}
+                  canDeleteAgent={canDeleteAgent}
+                  channelIdToName={channelIdToName}
+                  isArchived={isArchived}
+                  isDeleteAgentPending={isAgentActionPending}
+                  managedAgent={managedAgent}
+                  onEditAgent={handleEditAgent}
+                  onCreateCard={onCreateCard}
+                  onDeleteAgent={onDeleteAgent}
+                  onDuplicateAgent={onDuplicateAgent}
+                  onExportAgent={onExportAgent}
+                  onOpenActivity={onOpenActivity}
+                  pubkey={pubkey}
+                  showActivityIngress={showActivityIngress}
+                  showInstructionBlock={showInstructionBlock}
+                />
+                {import.meta.env?.VITE_SPACES_ALPHA === "1" &&
+                isBot &&
+                pubkey ? (
+                  <SpacesAgentConnections pubkey={pubkey} />
+                ) : null}
+              </div>
             ) : null}
             {activeTab === "runtime" ? (
               <div className="space-y-4">

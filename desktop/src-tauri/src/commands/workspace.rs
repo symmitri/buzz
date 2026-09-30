@@ -157,6 +157,13 @@ pub async fn apply_workspace(
     agent_managed_profiles: Option<bool>,
     app: AppHandle,
 ) -> Result<(), String> {
+    if crate::build_identity::demo_slug() == Some("spaces-alpha") {
+        return crate::spaces_auth::community_session::apply_workspace(
+            &app,
+            &relay_url,
+            nsec.as_deref(),
+        );
+    }
     let state = app.state::<AppState>();
     // Take the generation only after entering the serialized transaction. An
     // apply that is already running remains authoritative until it releases

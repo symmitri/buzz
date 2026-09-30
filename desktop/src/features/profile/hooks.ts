@@ -1,6 +1,5 @@
 import type {
   InfiniteData,
-  QueryClient,
   UseInfiniteQueryResult,
 } from "@tanstack/react-query";
 import * as React from "react";
@@ -25,7 +24,6 @@ import type {
   UpdateProfileInput,
   UserSearchResult,
   UserSearchPage,
-  UserProfileSummary,
   UsersBatchResponse,
 } from "@/shared/api/types";
 import { useIdentityQuery } from "@/shared/api/hooks";
@@ -45,6 +43,20 @@ import {
   writeCachedUserLabels,
 } from "@/features/profile/lib/userLabelStorage";
 import { useCommunities } from "@/features/communities/useCommunities";
+import {
+  evictUsersBatchEntries,
+  usersBatchEntryKey,
+  USERS_BATCH_ENTRY_FRESH_MS,
+  USERS_BATCH_MISS_FRESH_MS,
+  isUsersBatchEntryFresh,
+  shouldRetryMissingProfiles,
+  syncFetchedUserProfile,
+  type UsersBatchEntry,
+} from "./userProfileCache";
+import {
+  agentDisplayLabelsKey,
+  withAgentDisplayLabels,
+} from "./agentDisplayLabels";
 import { updateCachedChannelMemberDisplayName } from "@/features/channels/channelMemberProfileCache";
 
 export const profileQueryKey = ["profile"] as const;
@@ -274,56 +286,29 @@ export function useUnfollowMutation(currentPubkey?: string) {
 }
 
 export function useUserProfileQuery(pubkey?: string) {
+  const queryClient = useQueryClient();
+  const { activeCommunity } = useCommunities();
+  const relayUrl = activeCommunity?.relayUrl ?? "";
   return useQuery({
     enabled: typeof pubkey === "string" && pubkey.length > 0,
     queryKey: ["user-profile", pubkey?.toLowerCase() ?? ""],
-    queryFn: () => getUserProfile(pubkey),
+    queryFn: async ({ signal }) => {
+      const profile = await getUserProfile(pubkey);
+      signal.throwIfAborted();
+      await syncFetchedUserProfile(queryClient, profile, relayUrl, signal);
+      return profile;
+    },
     staleTime: 60_000,
   });
 }
 
-// Per-pubkey resolution cache backing `useUsersBatchQuery`'s delta fetch.
-// `summary: null` records a relay-confirmed miss so unknown pubkeys aren't
-// re-requested every page. Entries older than the hook's 10-minute staleTime
-// are treated as unresolved and refetched.
-export type UsersBatchEntry = {
-  summary: UserProfileSummary | null;
-  fetchedAt: number;
-};
-
-export const usersBatchEntryKey = (pubkey: string) => [
-  "users-batch-entry",
-  pubkey,
-];
-
-/**
- * How long a per-pubkey entry answers without a refetch. Exported so readers
- * outside this hook (the clipboard's paste-side identity check) apply the same
- * freshness rule rather than trusting an entry this hook already considers
- * stale.
- */
-export const USERS_BATCH_ENTRY_FRESH_MS = 10 * 60_000;
-
-/**
- * Drop the per-pubkey delta-fetch entries so the next `useUsersBatchQuery`
- * run re-fetches these profiles from the relay. Must be called anywhere a
- * specific profile (or a containing `users-batch` query) is invalidated —
- * otherwise the re-run resolves from the still-fresh-looking entry and
- * renders the stale name/avatar for up to the entry's 10-minute freshness
- * window.
- * Synchronous, so callers can evict before awaiting aggregate invalidations.
- */
-export function evictUsersBatchEntries(
-  queryClient: QueryClient,
-  pubkeys: string[],
-) {
-  for (const pubkey of pubkeys) {
-    queryClient.removeQueries({
-      queryKey: usersBatchEntryKey(pubkey.toLowerCase()),
-      exact: true,
-    });
-  }
-}
+// Keep compatibility for cache invalidators and clipboard identity readers.
+export {
+  evictUsersBatchEntries,
+  usersBatchEntryKey,
+  USERS_BATCH_ENTRY_FRESH_MS,
+} from "./userProfileCache";
+export type { UsersBatchEntry } from "./userProfileCache";
 
 export function useUsersBatchQuery(
   pubkeys: string[],
@@ -334,12 +319,22 @@ export function useUsersBatchQuery(
   const queryClient = useQueryClient();
   const { activeCommunity } = useCommunities();
   const relayUrl = activeCommunity?.relayUrl ?? "";
-  const normalizedPubkeys = [
-    ...new Set(pubkeys.map((pubkey) => pubkey.toLowerCase())),
-  ]
-    .filter((pubkey) => pubkey.length > 0)
-    .sort();
+  const normalizedPubkeys = React.useMemo(
+    () =>
+      [...new Set(pubkeys.map((pubkey) => pubkey.toLowerCase()))]
+        .filter((pubkey) => pubkey.length > 0)
+        .sort(),
+    [pubkeys],
+  );
   const enabled = (options?.enabled ?? true) && normalizedPubkeys.length > 0;
+  const identity = useIdentityQuery();
+  // Observe only names already read in the governed gallery; no Gateway request
+  // is added to chat. These labels never establish ownership or permission.
+  const labels = useQuery<Record<string, string>>({
+    queryKey: agentDisplayLabelsKey(relayUrl, identity.data?.pubkey ?? ""),
+    queryFn: () => ({}),
+    enabled: false,
+  });
 
   const query = useQuery<UsersBatchResponse>({
     enabled,
@@ -351,7 +346,7 @@ export function useUsersBatchQuery(
     // staging; RESEARCH/PERF_STAGING_SCROLLBACK.md). Resolve from the
     // per-pubkey entry cache first and hit the network only for pubkeys not
     // freshly resolved.
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const now = Date.now();
       const profiles: UsersBatchResponse["profiles"] = {};
       const missing: string[] = [];
@@ -360,7 +355,7 @@ export function useUsersBatchQuery(
         const entry = queryClient.getQueryData<UsersBatchEntry>(
           usersBatchEntryKey(pubkey),
         );
-        if (entry && now - entry.fetchedAt < USERS_BATCH_ENTRY_FRESH_MS) {
+        if (entry && isUsersBatchEntryFresh(entry, now)) {
           if (entry.summary) profiles[pubkey] = entry.summary;
           else missing.push(pubkey);
         } else {
@@ -369,6 +364,9 @@ export function useUsersBatchQuery(
       }
       if (toFetch.length > 0) {
         const fresh = await getUsersBatch(toFetch);
+        // A detail refresh can cancel an older batch. Native IPC cannot abort,
+        // but its late response must not overwrite the newer name/owner.
+        signal.throwIfAborted();
         if (relayUrl) {
           writeCachedUserLabels(relayUrl, fresh.profiles, fresh.missing);
         }
@@ -376,7 +374,15 @@ export function useUsersBatchQuery(
           const summary = fresh.profiles[pubkey] ?? null;
           queryClient.setQueryData<UsersBatchEntry>(
             usersBatchEntryKey(pubkey),
-            { summary, fetchedAt: now },
+            {
+              summary,
+              fetchedAt: now,
+              missCount: summary
+                ? 0
+                : (queryClient.getQueryData<UsersBatchEntry>(
+                    usersBatchEntryKey(pubkey),
+                  )?.missCount ?? 0) + 1,
+            },
           );
           if (summary) profiles[pubkey] = summary;
           else missing.push(pubkey);
@@ -393,7 +399,18 @@ export function useUsersBatchQuery(
         relayUrl,
         normalizedPubkeys,
       ),
-    staleTime: USERS_BATCH_ENTRY_FRESH_MS,
+    staleTime: (query) =>
+      query.state.data?.missing.length
+        ? USERS_BATCH_MISS_FRESH_MS
+        : USERS_BATCH_ENTRY_FRESH_MS,
+    // Briefly retry active misses (at most four relay reads per unresolved key).
+    // Resolved users keep the long cache window; exhausted misses wait for normal
+    // stale remount/manual refresh. No background polling or new IPC type.
+    refetchInterval: (query) =>
+      query.state.status === "success" &&
+      shouldRetryMissingProfiles(queryClient, query.state.data?.missing ?? [])
+        ? USERS_BATCH_MISS_FRESH_MS
+        : false,
     gcTime: 5 * 60 * 1_000,
     // Override the global defaults: a cold channel needs profiles to render
     // correctly, so a single failed attempt must not leave raw npubs/broken
@@ -434,7 +451,11 @@ export function useUsersBatchQuery(
     }
   }, [query.data, query.dataUpdatedAt, queryClient]);
 
-  return query;
+  const displayData = React.useMemo(
+    () => withAgentDisplayLabels(query.data, normalizedPubkeys, labels.data),
+    [query.data, normalizedPubkeys, labels.data],
+  );
+  return { ...query, data: displayData };
 }
 
 export function useUserSearchQuery(

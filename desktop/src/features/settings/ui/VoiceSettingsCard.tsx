@@ -1,3 +1,5 @@
+// Symmitri modification: Spaces labels for the Alpha build.
+import { PRODUCT_NAME } from "@/shared/lib/product-brand";
 import * as React from "react";
 import { ChevronDown, Play, Trash2, Upload, Volume2 } from "lucide-react";
 
@@ -188,7 +190,7 @@ export function VoiceSettingsCard() {
     <section className="min-w-0" data-testid="settings-voice">
       <SettingsSectionHeader
         title="Voice"
-        description="Choose whether Buzz reads new agent responses aloud during an active huddle."
+        description={`Choose whether ${PRODUCT_NAME} reads new agent responses aloud during an active huddle.`}
       />
 
       <SettingsOptionGroupList>

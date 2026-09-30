@@ -7,6 +7,16 @@
     "skipLibCheck": true,
     "paths": {
       "@/*": ["./src/*"],
+      "@axis/gateway-client/work-release": ["../.spaces-axis-contracts/work-release.ts"],
+      "@axis/buzz/event-contract": ["../.spaces-axis-contracts/buzz-event-contract.ts"],
+      "@axis/buzz/disclosure-contract": ["../.spaces-axis-contracts/buzz-disclosure-contract.ts"],
+      "@axis/buzz/release-contract": ["../.spaces-axis-contracts/buzz-release-contract.ts"],
+      "@axis/buzz/reviewed-publication-contract": ["../.spaces-axis-contracts/buzz-reviewed-publication-contract.ts"],
+      "@axis/gateway-client/work-task-status": [
+        "../.spaces-axis-contracts/work-task-status.ts"
+      ],
+      "@axis/gateway-client": ["../.spaces-axis-contracts/gateway-client.ts"],
+      "@axis/collaboration": ["../.spaces-axis-contracts/work-sessions.ts"],
       "@features-manifest": ["../preview-features.json"],
       "@protected-features": ["./src/protectedFeatures/public.ts"],
       "@protected-feature-components": ["./src/protectedFeatures/publicUi.ts"],

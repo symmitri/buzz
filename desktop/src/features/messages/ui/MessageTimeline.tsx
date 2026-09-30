@@ -52,6 +52,7 @@ type MessageTimelineProps = {
   threadSummaries?: ReadonlyMap<string, ChannelWindowThreadSummary>;
   directMessageIntro?: {
     displayName: string;
+    isSelf: boolean;
     participants: DirectMessageIntroParticipant[];
   } | null;
   isError?: boolean;
@@ -634,13 +635,19 @@ const MessageTimelineBase = React.forwardRef<
           <p className="mt-4 max-w-full truncate text-xl font-semibold leading-7 tracking-tight text-foreground">
             {activeDirectMessageIntro.displayName}
           </p>
-          <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
-            This is the beginning of your direct message with{" "}
-            <span className="font-medium text-foreground">
-              {activeDirectMessageIntro.displayName}
-            </span>
-            .
-          </p>
+          {activeDirectMessageIntro.isSelf ? (
+            <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+              A private space for your notes and reminders.
+            </p>
+          ) : (
+            <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+              This is the beginning of your direct message with{" "}
+              <span className="font-medium text-foreground">
+                {activeDirectMessageIntro.displayName}
+              </span>
+              .
+            </p>
+          )}
         </div>
       ) : null,
     [activeChannelIntro, activeDirectMessageIntro, activePinnedIntro],
@@ -825,13 +832,19 @@ const MessageTimelineBase = React.forwardRef<
                     <p className="mt-4 max-w-full truncate text-xl font-semibold leading-7 tracking-tight text-foreground">
                       {activeDirectMessageIntro.displayName}
                     </p>
-                    <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
-                      This is the beginning of your direct message with{" "}
-                      <span className="font-medium text-foreground">
-                        {activeDirectMessageIntro.displayName}
-                      </span>
-                      .
-                    </p>
+                    {activeDirectMessageIntro.isSelf ? (
+                      <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+                        A private space for your notes and reminders.
+                      </p>
+                    ) : (
+                      <p className="mt-1 max-w-full truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+                        This is the beginning of your direct message with{" "}
+                        <span className="font-medium text-foreground">
+                          {activeDirectMessageIntro.displayName}
+                        </span>
+                        .
+                      </p>
+                    )}
                   </div>
                 ) : null}
 

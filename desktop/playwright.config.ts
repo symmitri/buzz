@@ -1,3 +1,4 @@
+// Symmitri modification: register native theme browser coverage.
 import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
@@ -20,6 +21,8 @@ export default defineConfig({
       name: "smoke",
       testMatch: [
         "**/smoke.spec.ts",
+        "**/work-consent.spec.ts",
+        "**/work-release.spec.ts",
         "**/owned-agent-discovery.spec.ts",
         "**/thread-head-stale-edit.spec.ts",
         "**/sidebar-offcanvas-rail.spec.ts",
@@ -146,6 +149,9 @@ export default defineConfig({
         "**/message-author-overlap.spec.ts",
         "**/buzz-theme-screenshots.spec.ts",
         "**/appearance-previews.spec.ts",
+        "**/symmitri-themes.spec.ts",
+        // Symmitri modification: exercise the native self-DM workflow in smoke.
+        "**/self-dm.spec.ts",
         "**/channel-sort.spec.ts",
         "**/identity-lost.spec.ts",
         "**/deep-link-invite.spec.ts",
